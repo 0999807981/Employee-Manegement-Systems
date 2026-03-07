@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EmployeeHub Pro</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div id="loginScreen" class="login-screen show">
+    <div class="login-wrapper">
+      <div class="login-left">
+        <div>
+          <div class="login-brand">
+            <div class="login-logo">EMS</div>
+            <div>
+              <h1 id="loginCompanyName">EmployeeHub Pro</h1>
+              <p>Smart workforce management platform</p>
+            </div>
+          </div>
+
+          <div class="login-text">
+            <h2>Run your workforce like a pro</h2>
+            <p>
+              Manage employee records, attendance, leave requests, payroll,
+              reports, notifications, performance and settings from one clean dashboard.
+            </p>
+          </div>
+        </div>
+
+        <div class="login-features">
+          <div class="login-feature-card">
+            <h3>Multi Admin Support</h3>
+            <p>Keep the default admin and let admins create more admin or HR accounts.</p>
+          </div>
+          <div class="login-feature-card">
+            <h3>Database Ready</h3>
+            <p>Your data can be saved to Supabase instead of staying in one browser only.</p>
+          </div>
+          <div class="login-feature-card">
+            <h3>Attendance, Leave & Payroll</h3>
+            <p>Track daily operations, approvals and payslips in one place.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="login-card pro-login-card">
+        <div class="login-card-top">
+          <span class="login-badge">Secure Access</span>
+          <h2>Sign In</h2>
+          <p>Use your admin or HR account to continue</p>
+        </div>
+
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="loginUsername">Username</label>
+            <input type="text" id="loginUsername" placeholder="Enter username" required />
+          </div>
+
+          <div class="form-group">
+            <label for="loginPassword">Password</label>
+            <input type="password" id="loginPassword" placeholder="Enter password" required />
+          </div>
+
+          <div class="login-row">
+            
+            <button type="button" id="forgotPasswordBtn" class="link-btn">Forgot password?</button>
+          </div>
+
+          <button type="submit" class="btn-primary full-btn login-submit-btn">Login</button>
+        </form>
+
+        <div class="login-mini-note">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container" id="appContainer" style="display:none;">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark" id="brandMark">EMS</div>
+        <div class="brand-text">
+          <h2 id="brandCompanyName">EmployeeHub Pro</h2>
+          <p>Management System</p>
+        </div>
+      </div>
+
+      <ul id="navList">
+        <li class="nav-item active" data-section="dashboardSection">
+          <span class="nav-icon">📊</span>
+          <span class="nav-label">Dashboard</span>
+        </li>
+        <li class="nav-item" data-section="employeesSection">
+          <span class="nav-icon">👥</span>
+          <span class="nav-label">Employees</span>
+        </li>
+        <li class="nav-item" data-section="attendanceSection">
+          <span class="nav-icon">🕒</span>
+          <span class="nav-label">Attendance</span>
+        </li>
+        <li class="nav-item" data-section="leaveSection">
+          <span class="nav-icon">🗓️</span>
+          <span class="nav-label">Leave</span>
+        </li>
+        <li class="nav-item" data-section="payrollSection">
+          <span class="nav-icon">💵</span>
+          <span class="nav-label">Payroll</span>
+        </li>
+        <li class="nav-item" data-section="performanceSection">
+          <span class="nav-icon">⭐</span>
+          <span class="nav-label">Performance</span>
+        </li>
+        <li class="nav-item" data-section="reportsSection">
+          <span class="nav-icon">📈</span>
+          <span class="nav-label">Reports</span>
+        </li>
+        <li class="nav-item" data-section="notificationsSection">
+          <span class="nav-icon">🔔</span>
+          <span class="nav-label">Notifications</span>
+        </li>
+        <li class="nav-item" data-section="settingsSection">
+          <span class="nav-icon">⚙️</span>
+          <span class="nav-label">Settings</span>
+        </li>
+      </ul>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div>
+          <h1 id="pageTitle">Employee Management Dashboard</h1>
+          <p class="topbar-subtext" id="roleText">Role: Admin</p>
+          <p class="dashboard-date" id="dashboardDateText">Date: --</p>
+        </div>
+
+        <div class="topbar-actions">
+          <div class="search-box">
+            <input type="text" id="globalSearchInput" placeholder="Search employee by name..." />
+          </div>
+
+          <div class="action-menu-wrapper">
+            <button id="actionMenuBtn" class="btn-primary action-menu-btn" type="button">Menu ▾</button>
+            <div id="actionDropdown" class="action-dropdown">
+              <button id="darkModeToggle" type="button">Dark Mode</button>
+              <button id="exportExcelBtn" type="button">Export Excel</button>
+              <button id="exportPdfBtn" type="button">Export PDF</button>
+              <button id="backupBtn" type="button">Backup Data</button>
+              <label class="restore-label">
+                Restore Data
+                <input type="file" id="restoreInput" accept=".json" hidden />
+              </label>
+              <button id="logoutBtn" type="button" class="danger-menu-item">Logout</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mobile-nav-bar">
+        <select id="mobileSectionSelect">
+          <option value="dashboardSection">Dashboard</option>
+          <option value="employeesSection">Employees</option>
+          <option value="attendanceSection">Attendance</option>
+          <option value="leaveSection">Leave</option>
+          <option value="payrollSection">Payroll</option>
+          <option value="performanceSection">Performance</option>
+          <option value="reportsSection">Reports</option>
+          <option value="notificationsSection">Notifications</option>
+          <option value="settingsSection">Settings</option>
+        </select>
+      </div>
+
+      <div class="page-content">
+        <section id="dashboardSection" class="page-section active-section">
+          <section class="summary-cards">
+            <div class="card gradient-card blue-card"><h3>Total Employees</h3><p id="totalEmployees">0</p></div>
+            <div class="card gradient-card green-card"><h3>Present Today</h3><p id="presentEmployees">0</p></div>
+            <div class="card gradient-card orange-card"><h3>Late Today</h3><p id="lateEmployees">0</p></div>
+            <div class="card gradient-card red-card"><h3>Absent Today</h3><p id="absentEmployees">0</p></div>
+            <div class="card gradient-card yellow-card"><h3>On Leave Today</h3><p id="leaveEmployees">0</p></div>
+            <div class="card gradient-card purple-card"><h3>Pending Leave Requests</h3><p id="pendingLeaveCount">0</p></div>
+            <div class="card gradient-card teal-card"><h3>Payroll Receipts</h3><p id="payrollReceiptCount">0</p></div>
+          </section>
+
+          <section class="analytics-grid">
+            <div class="table-section">
+              <h2>Quick Analytics</h2>
+              <div class="mini-stat-list">
+                <div class="mini-stat"><span>Best Attendance</span><strong id="bestAttendanceEmployee">-</strong></div>
+                <div class="mini-stat"><span>Most Absent</span><strong id="mostAbsentEmployee">-</strong></div>
+                <div class="mini-stat"><span>Top Department</span><strong id="topDepartment">-</strong></div>
+                <div class="mini-stat"><span>Average Attendance</span><strong id="averageAttendanceRate">0%</strong></div>
+              </div>
+            </div>
+
+            <div class="table-section">
+              <h2>Recent Notifications</h2>
+              <div id="dashboardNotifications" class="notification-list compact-list"></div>
+            </div>
+          </section>
+
+          <section class="content-grid">
+            <div class="form-section">
+              <h2>Add / Edit Employee</h2>
+              <form id="employeeForm">
+                <div class="image-upload-box">
+                  <label for="employeeImage">Employee Photo</label>
+                  <input type="file" id="employeeImage" accept="image/*" />
+                  <div class="image-preview-wrapper">
+                    <img id="imagePreview" src="" alt="Preview" />
+                    <p id="imagePreviewText">No image selected</p>
+                  </div>
+                </div>
+
+                <div class="form-group"><label for="employeeId">Employee ID</label><input type="text" id="employeeId" placeholder="EMP001" required /></div>
+                <div class="form-group"><label for="employeeName">Full Name</label><input type="text" id="employeeName" placeholder="John Banda" required /></div>
+                <div class="form-group"><label for="department">Department</label><select id="department" required></select></div>
+                <div class="form-group"><label for="position">Position</label><input type="text" id="position" placeholder="Developer" required /></div>
+                <div class="form-group"><label for="salary">Salary (MK)</label><input type="number" id="salary" placeholder="250000" required /></div>
+                <div class="form-group"><label for="phone">Phone Number</label><input type="text" id="phone" placeholder="0991234567" /></div>
+                <div class="form-group"><label for="email">Email</label><input type="email" id="email" placeholder="john@example.com" /></div>
+                <div class="form-group"><label for="address">Address</label><input type="text" id="address" placeholder="Blantyre" /></div>
+                <div class="form-group"><label for="gender">Gender</label><select id="gender"><option value="">Select gender</option><option value="Male">Male</option><option value="Female">Female</option></select></div>
+                <div class="form-group"><label for="dob">Date of Birth</label><input type="date" id="dob" /></div>
+                <div class="form-group"><label for="joinDate">Joining Date</label><input type="date" id="joinDate" /></div>
+                <div class="form-group"><label for="emergencyContact">Emergency Contact</label><input type="text" id="emergencyContact" placeholder="0887654321" /></div>
+                <div class="form-group"><label for="annualLeaveBalance">Annual Leave Balance</label><input type="number" id="annualLeaveBalance" value="21" /></div>
+                <div class="form-group"><label for="sickLeaveBalance">Sick Leave Balance</label><input type="number" id="sickLeaveBalance" value="10" /></div>
+
+                <div class="form-group">
+                  <label for="employeeDocuments">Employee Documents</label>
+                  <input type="file" id="employeeDocuments" multiple />
+                  <small class="muted-text">Stored as document names for lightweight storage.</small>
+                </div>
+
+                <div class="button-group">
+                  <button type="submit" class="btn-primary" id="submitBtn">Add Employee</button>
+                  <button type="button" class="btn-secondary" id="resetBtn">Clear</button>
+                </div>
+              </form>
+            </div>
+
+            <div class="table-section">
+              <div class="section-header">
+                <h2>Employee Records</h2>
+                <input type="text" id="employeeSearchInput" placeholder="Search employees..." class="section-search" />
+              </div>
+
+              <div class="filters">
+                <select id="departmentFilter"></select>
+                <select id="statusFilter">
+                  <option value="All">All Status</option>
+                  <option value="Present">Present</option>
+                  <option value="Late">Late</option>
+                  <option value="Absent">Absent</option>
+                  <option value="Leave">Leave</option>
+                  <option value="Not Marked">Not Marked</option>
+                </select>
+              </div>
+
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Photo</th><th>ID</th><th>Name</th><th>Department</th><th>Position</th><th>Salary</th><th>Today Status</th><th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="employeeTableBody"></tbody>
+                </table>
+              </div>
+              <div class="empty-state" id="emptyState">No employee records yet.</div>
+            </div>
+          </section>
+        </section>
+
+        <section id="employeesSection" class="page-section">
+          <div class="table-section">
+            <div class="section-header">
+              <h2>All Employees</h2>
+              <input type="text" id="employeesPageSearchInput" placeholder="Search employees..." class="section-search" />
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Photo</th><th>ID</th><th>Name</th><th>Department</th><th>Position</th><th>Salary</th><th>Leave Balance</th><th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="employeesOnlyTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section id="attendanceSection" class="page-section">
+          <div class="table-section">
+            <h2>Attendance</h2>
+            <div class="filters">
+              <input type="date" id="attendanceDate" />
+              <select id="attendanceEmployee"><option value="">Select Employee</option></select>
+              <select id="attendanceStatusSelect"><option value="Present">Present</option><option value="Late">Late</option><option value="Absent">Absent</option></select>
+              <button id="markAttendanceBtn" class="btn-primary" type="button">Mark Attendance</button>
+              <button id="clearSingleAttendanceBtn" class="btn-warning" type="button">Clear Selected Attendance</button>
+              <button id="clearAllAttendanceForDateBtn" class="btn-danger" type="button">Clear All For Date</button>
+            </div>
+
+            <div class="filters">
+              <input type="month" id="monthFilter" />
+              <input type="text" id="attendanceSearchInput" placeholder="Search attendance..." class="section-search" />
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr><th>ID</th><th>Name</th><th>Department</th><th>Late Days This Month</th><th>Absent Days This Month</th><th>Attendance %</th></tr>
+                </thead>
+                <tbody id="attendanceTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section id="leaveSection" class="page-section">
+          <div class="content-grid">
+            <div class="form-section">
+              <h2>Leave Management</h2>
+              <form id="leaveForm">
+                <div class="form-group"><label for="leaveEmployee">Employee</label><select id="leaveEmployee" required><option value="">Select Employee</option></select></div>
+                <div class="form-group"><label for="leaveType">Leave Type</label><select id="leaveType" required><option value="">Select leave type</option><option value="Annual Leave">Annual Leave</option><option value="Sick Leave">Sick Leave</option><option value="Emergency Leave">Emergency Leave</option><option value="Unpaid Leave">Unpaid Leave</option></select></div>
+                <div class="form-group"><label for="leaveStartDate">Start Date</label><input type="date" id="leaveStartDate" required /></div>
+                <div class="form-group"><label for="leaveEndDate">End Date</label><input type="date" id="leaveEndDate" required /></div>
+                <div class="form-group"><label for="leaveReason">Reason</label><textarea id="leaveReason" rows="4" placeholder="Reason for leave"></textarea></div>
+                <button type="submit" class="btn-primary full-btn">Submit Leave Request</button>
+              </form>
+            </div>
+
+            <div class="table-section">
+              <div class="section-header"><h2>Leave Requests</h2><input type="text" id="leaveSearchInput" placeholder="Search leave..." class="section-search" /></div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr><th>Leave ID</th><th>Employee</th><th>Type</th><th>Days</th><th>Balance After</th><th>Start</th><th>End</th><th>Status</th><th>Actions</th></tr>
+                  </thead>
+                  <tbody id="leaveTableBody"></tbody>
+                </table>
+              </div>
+              <div class="empty-state" id="leaveEmptyState">No leave requests yet.</div>
+            </div>
+          </div>
+        </section>
+
+        <section id="payrollSection" class="page-section">
+          <div class="content-grid">
+            <div class="form-section">
+              <h2>Salary Slip / Payroll</h2>
+              <form id="payrollForm">
+                <div class="form-group"><label for="payrollEmployee">Employee</label><select id="payrollEmployee" required><option value="">Select Employee</option></select></div>
+                <div class="form-group"><label for="payrollMonth">Month</label><input type="month" id="payrollMonth" required /></div>
+                <div class="form-group"><label for="allowances">Allowances (MK)</label><input type="number" id="allowances" value="0" /></div>
+                <div class="form-group"><label for="deductions">Deductions (MK)</label><input type="number" id="deductions" value="0" /></div>
+                <button type="submit" class="btn-primary full-btn">Generate Payslip</button>
+              </form>
+            </div>
+
+            <div class="table-section">
+              <h2>Payslip Preview</h2>
+              <div id="payslipCard" class="payslip-card"><p>No payslip generated yet.</p></div>
+              <div class="button-group"><button id="printPayslipBtn" type="button" class="btn-secondary">Print Payslip</button></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="performanceSection" class="page-section">
+          <section class="summary-cards performance-summary-cards">
+            <div class="card gradient-card blue-card"><h3>Total Reviews</h3><p id="performanceTotalReviews">0</p></div>
+            <div class="card gradient-card green-card"><h3>Average Rating</h3><p id="performanceAverageRating">0</p></div>
+            <div class="card gradient-card purple-card"><h3>Top Performer</h3><p id="performanceTopPerformer">-</p></div>
+          </section>
+
+          <div class="content-grid">
+            <div class="form-section">
+              <h2>Employee Performance</h2>
+              <form id="performanceForm">
+                <div class="form-group"><label for="performanceEmployee">Employee</label><select id="performanceEmployee" required><option value="">Select Employee</option></select></div>
+                <div class="form-group"><label for="performanceRating">Rating (1 - 5)</label><input type="number" id="performanceRating" min="1" max="5" step="0.1" placeholder="4.5" required /></div>
+                <div class="form-group"><label for="tasksCompleted">Tasks Completed</label><input type="number" id="tasksCompleted" min="0" value="0" /></div>
+                <div class="form-group"><label for="projectsCompleted">Projects Completed</label><input type="number" id="projectsCompleted" min="0" value="0" /></div>
+                <div class="form-group"><label for="managerComment">Manager Comment</label><textarea id="managerComment" rows="5" placeholder="Write manager comment here..."></textarea></div>
+                <button type="submit" class="btn-primary full-btn">Save Performance</button>
+              </form>
+            </div>
+
+            <div class="table-section">
+              <div class="section-header"><h2>Performance Records</h2><input type="text" id="performanceSearchInput" placeholder="Search performance..." class="section-search" /></div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Employee ID</th><th>Name</th><th>Department</th><th>Rating</th><th>Tasks</th><th>Projects</th><th>Comment</th></tr></thead>
+                  <tbody id="performanceTableBody"></tbody>
+                </table>
+              </div>
+              <div class="empty-state" id="performanceEmptyState">No performance records yet.</div>
+            </div>
+          </div>
+        </section>
+
+        <section id="reportsSection" class="page-section">
+          <section class="summary-cards">
+            <div class="card gradient-card blue-card"><h3>Highest Salary</h3><p id="highestSalary">MK 0</p></div>
+            <div class="card gradient-card red-card"><h3>Lowest Salary</h3><p id="lowestSalary">MK 0</p></div>
+            <div class="card gradient-card green-card"><h3>Average Salary</h3><p id="averageSalary">MK 0</p></div>
+            <div class="card gradient-card purple-card"><h3>Main Department</h3><p id="mainDepartment">N/A</p></div>
+          </section>
+
+          <section class="charts-grid">
+            <div class="chart-card"><h2>Employees per Department</h2><canvas id="departmentChart"></canvas></div>
+            <div class="chart-card"><h2>Monthly Absence Count</h2><canvas id="absenceChart"></canvas></div>
+            <div class="chart-card"><h2>Monthly Late Count</h2><canvas id="lateChart"></canvas></div>
+            <div class="chart-card"><h2>Leave Status</h2><canvas id="leaveChart"></canvas></div>
+            <div class="chart-card"><h2>Payroll by Department</h2><canvas id="salaryChart"></canvas></div>
+          </section>
+
+          <div class="table-section" style="margin-top: 20px;">
+            <div class="section-header"><h2>Payroll Receipts History</h2><input type="text" id="payrollSearchInput" placeholder="Search payroll..." class="section-search" /></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Receipt ID</th><th>Employee</th><th>Month</th><th>Base Salary</th><th>Allowances</th><th>Deductions</th><th>Net Pay</th><th>Date Created</th><th>Actions</th></tr></thead>
+                <tbody id="payrollReceiptsTableBody"></tbody>
+              </table>
+            </div>
+            <div class="empty-state" id="payrollReceiptsEmptyState">No payroll receipts generated yet.</div>
+          </div>
+        </section>
+
+        <section id="notificationsSection" class="page-section">
+          <div class="table-section">
+            <div class="section-header"><h2>Notifications</h2><input type="text" id="notificationSearchInput" placeholder="Search notifications..." class="section-search" /></div>
+            <div id="notificationsList" class="notification-list"></div>
+          </div>
+        </section>
+
+        <section id="settingsSection" class="page-section">
+          <div class="content-grid">
+            <div class="form-section">
+              <h2>System Settings</h2>
+              <form id="settingsForm">
+                <div class="form-group"><label for="companyNameInput">Company Name</label><input type="text" id="companyNameInput" /></div>
+                <div class="form-group"><label for="companyLogoTextInput">Logo Text</label><input type="text" id="companyLogoTextInput" maxlength="4" /></div>
+                <div class="form-group"><label for="defaultAnnualLeaveInput">Default Annual Leave</label><input type="number" id="defaultAnnualLeaveInput" /></div>
+                <div class="form-group"><label for="defaultSickLeaveInput">Default Sick Leave</label><input type="number" id="defaultSickLeaveInput" /></div>
+                <div class="button-group"><button type="submit" class="btn-primary">Save Settings</button></div>
+              </form>
+            </div>
+
+            <div class="table-section">
+              <h2>Department Management</h2>
+              <div class="filters"><input type="text" id="newDepartmentInput" placeholder="Add department..." /><button id="addDepartmentBtn" type="button" class="btn-primary">Add Department</button></div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Department Name</th><th>Employees</th><th>Actions</th></tr></thead>
+                  <tbody id="departmentsTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="content-grid" style="margin-top: 20px;">
+            <div class="form-section">
+              <h2>Create User Account</h2>
+              <form id="userAccountForm">
+                <div class="form-group"><label for="accountFullName">Full Name</label><input type="text" id="accountFullName" placeholder="Jane Admin" required /></div>
+                <div class="form-group"><label for="accountUsername">Username</label><input type="text" id="accountUsername" placeholder="janeadmin" required /></div>
+                <div class="form-group"><label for="accountPassword">Password</label><input type="password" id="accountPassword" placeholder="Enter password" required /></div>
+                <div class="form-group"><label for="accountRole">Role</label><select id="accountRole" required><option value="admin">Admin</option><option value="hr">HR</option></select></div>
+                <div class="button-group"><button type="submit" class="btn-primary">Create Account</button></div>
+              </form>
+            </div>
+
+            <div class="table-section">
+              <div class="section-header"><h2>System Users</h2><input type="text" id="userSearchInput" placeholder="Search users..." class="section-search" /></div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Created</th><th>Actions</th></tr></thead>
+                  <tbody id="usersTableBody"></tbody>
+                </table>
+              </div>
+              <div class="empty-state" id="usersEmptyState">No user accounts yet.</div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div id="imageModal" class="modal-overlay"><div class="modal-card small-modal"><button id="closeImageModal" class="close-modal" type="button">&times;</button><img id="modalImage" src="" alt="Employee Photo" /><p id="modalImageName"></p></div></div>
+  <div id="profileModal" class="modal-overlay"><div class="modal-card wide-modal"><button id="closeProfileModal" class="close-modal" type="button">&times;</button><div id="profileModalContent"></div></div></div>
+
+  <div id="historyModal" class="modal-overlay">
+    <div class="modal-card wide-modal">
+      <button id="closeHistoryModal" class="close-modal" type="button">&times;</button>
+      <div class="history-header"><h2 id="historyEmployeeName">Attendance History</h2><input type="month" id="historyMonthFilter" /></div>
+      <div class="history-stats">
+        <div class="history-stat-box"><span>Present Days</span><strong id="historyPresentCount">0</strong></div>
+        <div class="history-stat-box"><span>Late Days</span><strong id="historyLateCount">0</strong></div>
+        <div class="history-stat-box"><span>Absent Days</span><strong id="historyAbsentCount">0</strong></div>
+        <div class="history-stat-box"><span>Total Records</span><strong id="historyTotalCount">0</strong></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Status</th><th>Department</th></tr></thead>
+          <tbody id="historyTableBody"></tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="historyEmptyState">No attendance history found.</div>
+    </div>
+  </div>
+
+  <div id="calendarModal" class="modal-overlay">
+    <div class="modal-card wide-modal">
+      <button id="closeCalendarModal" class="close-modal" type="button">&times;</button>
+      <div class="history-header"><h2 id="calendarEmployeeName">Attendance Calendar</h2><input type="month" id="calendarMonthFilter" /></div>
+      <div class="calendar-legend">
+        <span><i class="legend-box legend-present"></i> Present</span>
+        <span><i class="legend-box legend-late"></i> Late</span>
+        <span><i class="legend-box legend-absent"></i> Absent</span>
+        <span><i class="legend-box legend-leave"></i> Leave</span>
+        <span><i class="legend-box legend-none"></i> Not Marked</span>
+      </div>
+      <div id="attendanceCalendarGrid" class="attendance-calendar-grid"></div>
+    </div>
+  </div>
+
+  <div id="forgotPasswordModal" class="modal-overlay">
+    <div class="modal-card small-modal forgot-password-modal">
+      <button id="closeForgotPasswordModal" class="close-modal" type="button">&times;</button>
+      <h2 style="margin-bottom: 10px;">Reset Password</h2>
+      <p class="muted-text" style="margin-bottom: 16px;">Demo reset flow. Enter your full name, username and your new password.</p>
+      <form id="forgotPasswordForm">
+        <div class="form-group"><label for="forgotFullName">Full Name</label><input type="text" id="forgotFullName" placeholder="Default Admin" required /></div>
+        <div class="form-group"><label for="forgotUsername">Username</label><input type="text" id="forgotUsername" placeholder="admin" required /></div>
+        <div class="form-group"><label for="forgotNewPassword">New Password</label><input type="password" id="forgotNewPassword" placeholder="Enter new password" required /></div>
+        <div class="form-group"><label for="forgotConfirmPassword">Confirm Password</label><input type="password" id="forgotConfirmPassword" placeholder="Confirm password" required /></div>
+        <button type="submit" class="btn-primary full-btn">Reset Password</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="supabase.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
