@@ -37,7 +37,7 @@
         <div class="login-features">
           <div class="login-feature-card">
             <h3>Multi Admin Support</h3>
-            <p>Keep the default admin and let admins create more admin or HR accounts.</p>
+            <p>Keep the default admin and let admins create more admin, HR, or employee accounts.</p>
           </div>
           <div class="login-feature-card">
             <h3>Database Ready</h3>
@@ -54,7 +54,7 @@
         <div class="login-card-top">
           <span class="login-badge">Secure Access</span>
           <h2>Sign In</h2>
-          <p>Use your admin or HR account to continue</p>
+          <p>Use your account to continue</p>
         </div>
 
         <form id="loginForm">
@@ -68,10 +68,7 @@
             <input type="password" id="loginPassword" placeholder="Enter password" required />
           </div>
 
-          <div class="login-row">
-            
-          <!--  <button type="button" id="forgotPasswordBtn" class="link-btn">Forgot password?</button>-->
-          </div>
+          <div class="login-row"></div>
 
           <button type="submit" class="btn-primary full-btn login-submit-btn">Login</button>
         </form>
@@ -477,7 +474,20 @@
                 <div class="form-group"><label for="accountFullName">Full Name</label><input type="text" id="accountFullName" placeholder="Jane Admin" required /></div>
                 <div class="form-group"><label for="accountUsername">Username</label><input type="text" id="accountUsername" placeholder="janeadmin" required /></div>
                 <div class="form-group"><label for="accountPassword">Password</label><input type="password" id="accountPassword" placeholder="Enter password" required /></div>
-                <div class="form-group"><label for="accountRole">Role</label><select id="accountRole" required><option value="admin">Admin</option><option value="hr">HR</option></select></div>
+                <div class="form-group">
+                  <label for="accountRole">Role</label>
+                  <select id="accountRole" required>
+                    <option value="admin">Admin</option>
+                    <option value="hr">HR</option>
+                    <option value="employee">Employee</option>
+                  </select>
+                </div>
+                <div class="form-group" id="accountEmployeeGroup" style="display:none;">
+                  <label for="accountEmployeeId">Link Employee</label>
+                  <select id="accountEmployeeId">
+                    <option value="">Select Employee</option>
+                  </select>
+                </div>
                 <div class="button-group"><button type="submit" class="btn-primary">Create Account</button></div>
               </form>
             </div>

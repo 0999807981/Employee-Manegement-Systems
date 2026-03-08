@@ -222,6 +222,8 @@ const accountFullName = $("accountFullName");
 const accountUsername = $("accountUsername");
 const accountPassword = $("accountPassword");
 const accountRole = $("accountRole");
+const accountEmployeeGroup = $("accountEmployeeGroup");
+const accountEmployeeId = $("accountEmployeeId");
 
 const imageModal = $("imageModal");
 const modalImage = $("modalImage");
@@ -261,6 +263,11 @@ function normalizeState(parsed) {
     role: user.role || "hr",
     employeeId: user.employeeId ?? null,
     createdAt: user.createdAt || new Date().toISOString()
+  }));
+
+  merged.users = merged.users.map((user) => ({
+    ...user,
+    employeeId: user.employeeId ?? null
   }));
 
   if (!merged.users.some((user) => user.username === "admin" && user.role === "admin")) {
@@ -335,6 +342,15 @@ function isAdmin() {
 
 function isHR() {
   return currentUser?.role === "hr";
+}
+
+function isEmployee() {
+  return currentUser?.role === "employee";
+}
+
+function getCurrentEmployee() {
+  if (!isEmployee()) return null;
+  return state.employees.find((emp) => emp.id === currentUser?.employeeId) || null;
 }
 
 function addNotification(title, message) {
@@ -538,6 +554,15 @@ async function login(username, password) {
     alert("Invalid login details.");
     return;
   }
+
+  if (user.role === "employee") {
+    const linkedEmployee = state.employees.find((emp) => emp.id === user.employeeId);
+    if (!linkedEmployee) {
+      alert("This employee account is not linked properly.");
+      return;
+    }
+  }
+
   currentUser = user;
   localStorage.setItem("emsCurrentUser", JSON.stringify(user));
   checkLoginState();
@@ -564,6 +589,33 @@ function showNav(sectionId) {
   if (option) option.style.display = "";
 }
 
+function configureNavForCurrentRole() {
+  const navMap = {
+    dashboardSection: "Dashboard",
+    employeesSection: isEmployee() ? "My Profile" : "Employees",
+    attendanceSection: isEmployee() ? "My Attendance" : "Attendance",
+    leaveSection: isEmployee() ? "My Leave" : "Leave",
+    payrollSection: isEmployee() ? "My Payslips" : "Payroll",
+    performanceSection: "Performance",
+    reportsSection: "Reports",
+    notificationsSection: "Notifications",
+    settingsSection: "Settings"
+  };
+
+  document.querySelectorAll(".nav-item").forEach((item) => {
+    const label = item.querySelector(".nav-label");
+    if (label && navMap[item.dataset.section]) {
+      label.textContent = navMap[item.dataset.section];
+    }
+  });
+
+  if (mobileSectionSelect) {
+    Array.from(mobileSectionSelect.options).forEach((option) => {
+      if (navMap[option.value]) option.textContent = navMap[option.value];
+    });
+  }
+}
+
 function applyRolePermissions() {
   const role = currentUser?.role || "admin";
   const displayName = currentUser?.fullName ? ` • ${currentUser.fullName}` : "";
@@ -579,17 +631,45 @@ function applyRolePermissions() {
     });
   }
 
+  configureNavForCurrentRole();
+
   if (isHR()) {
     hideNav("settingsSection");
     backupBtn.style.display = "none";
     restoreInput.parentElement.style.display = "none";
-    if (document.querySelector(".page-section.active-section")?.id === "settingsSection") {
-      showSection("dashboardSection");
-    }
+    exportExcelBtn.style.display = "block";
+    exportPdfBtn.style.display = "block";
+    globalSearchInput.parentElement.style.display = "block";
+  } else if (isEmployee()) {
+    hideNav("performanceSection");
+    hideNav("reportsSection");
+    hideNav("settingsSection");
+
+    backupBtn.style.display = "none";
+    restoreInput.parentElement.style.display = "none";
+    exportExcelBtn.style.display = "none";
+    exportPdfBtn.style.display = "none";
+
+    globalSearchInput.parentElement.style.display = "none";
   } else {
     showNav("settingsSection");
+    showNav("performanceSection");
+    showNav("reportsSection");
+
     backupBtn.style.display = "block";
     restoreInput.parentElement.style.display = "block";
+    exportExcelBtn.style.display = "block";
+    exportPdfBtn.style.display = "block";
+
+    globalSearchInput.parentElement.style.display = "block";
+  }
+
+  const activeSection = document.querySelector(".page-section.active-section")?.id;
+  if (
+    (isHR() && activeSection === "settingsSection") ||
+    (isEmployee() && ["performanceSection", "reportsSection", "settingsSection"].includes(activeSection))
+  ) {
+    showSection("dashboardSection");
   }
 }
 
@@ -639,6 +719,10 @@ function populateEmployeeDropdowns() {
   fillEmployeeSelect(leaveEmployee);
   fillEmployeeSelect(payrollEmployee);
   fillEmployeeSelect(performanceEmployee);
+
+  if (accountEmployeeId) {
+    fillEmployeeSelect(accountEmployeeId, "Select Employee");
+  }
 }
 
 function getCombinedSearch() {
@@ -658,6 +742,27 @@ function getFilteredEmployees(searchValue = "", statusValue = "All", deptValue =
 
 function updateSummary() {
   const today = attendanceDate.value || getCurrentDateValue();
+
+  if (isEmployee()) {
+    const emp = getCurrentEmployee();
+    if (!emp) return;
+
+    $("totalEmployees").textContent = "1";
+    $("presentEmployees").textContent = getStatusForDate(emp.id, today) === "Present" ? "1" : "0";
+    $("lateEmployees").textContent = getStatusForDate(emp.id, today) === "Late" ? "1" : "0";
+    $("absentEmployees").textContent = getStatusForDate(emp.id, today) === "Absent" ? "1" : "0";
+    $("leaveEmployees").textContent = isApprovedLeaveOnDate(emp.id, today) ? "1" : "0";
+    $("pendingLeaveCount").textContent = state.leaveRecords.filter(
+      (r) => r.employeeId === emp.id && r.status === "Pending"
+    ).length;
+    $("payrollReceiptCount").textContent = state.payrollReceipts.filter(
+      (r) => r.employeeId === emp.id
+    ).length;
+
+    dashboardDateText.textContent = `Date: ${formatNiceDate(today)}`;
+    return;
+  }
+
   $("totalEmployees").textContent = state.employees.length;
   $("presentEmployees").textContent = state.employees.filter((emp) => getStatusForDate(emp.id, today) === "Present").length;
   $("lateEmployees").textContent = state.employees.filter((emp) => getStatusForDate(emp.id, today) === "Late").length;
@@ -670,7 +775,14 @@ function updateSummary() {
 
 function updateAnalyticsCards() {
   const month = monthFilter.value || getCurrentMonthValue();
-  const data = state.employees.map((emp) => ({
+
+  let employees = state.employees;
+  if (isEmployee()) {
+    const emp = getCurrentEmployee();
+    employees = emp ? [emp] : [];
+  }
+
+  const data = employees.map((emp) => ({
     name: emp.name,
     attendanceRate: getAttendanceRate(emp.id, month),
     absentDays: getAbsentDaysForMonth(emp.id, month)
@@ -678,10 +790,12 @@ function updateAnalyticsCards() {
 
   const best = [...data].sort((a, b) => b.attendanceRate - a.attendanceRate)[0];
   const worst = [...data].sort((a, b) => b.absentDays - a.absentDays)[0];
+
   const deptCounts = {};
-  state.employees.forEach((emp) => {
+  employees.forEach((emp) => {
     deptCounts[emp.department] = (deptCounts[emp.department] || 0) + 1;
   });
+
   const topDepartment = Object.keys(deptCounts).sort((a, b) => deptCounts[b] - deptCounts[a])[0] || "-";
   const avg = data.length ? Math.round(data.reduce((sum, item) => sum + item.attendanceRate, 0) / data.length) : 0;
 
@@ -724,13 +838,26 @@ function updatePerformanceSummary() {
 
 function renderDashboardNotifications() {
   dashboardNotifications.innerHTML = "";
-  state.notifications.slice(0, 5).forEach((item) => {
+
+  let rows = state.notifications;
+  if (isEmployee()) {
+    const emp = getCurrentEmployee();
+    rows = emp
+      ? state.notifications.filter(
+          (item) =>
+            item.message.toLowerCase().includes(emp.name.toLowerCase()) ||
+            !item.message.toLowerCase().includes("admin")
+        )
+      : [];
+  }
+
+  rows.slice(0, 5).forEach((item) => {
     const div = document.createElement("div");
     div.className = "notification-item";
     div.innerHTML = `<h4>${item.title}</h4><p>${item.message}</p>`;
     dashboardNotifications.appendChild(div);
   });
-  if (!state.notifications.length) dashboardNotifications.innerHTML = `<div class="empty-state">No notifications yet.</div>`;
+  if (!rows.length) dashboardNotifications.innerHTML = `<div class="empty-state">No notifications yet.</div>`;
 }
 
 function getStatusBadge(status) {
@@ -742,9 +869,37 @@ function getStatusBadge(status) {
 }
 
 function renderDashboardTable() {
+  employeeTableBody.innerHTML = "";
+
+  if (isEmployee()) {
+    const emp = getCurrentEmployee();
+    if (!emp) {
+      emptyState.style.display = "block";
+      return;
+    }
+
+    emptyState.style.display = "none";
+    const index = state.employees.findIndex((item) => item.id === emp.id);
+    const status = getTodayStatus(emp.id);
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${getEmployeePhotoHTML(emp)}</td>
+      <td>${emp.id}</td>
+      <td>${emp.name}</td>
+      <td>${emp.department}</td>
+      <td>${emp.position}</td>
+      <td>${formatCurrency(emp.salary)}</td>
+      <td>${getStatusBadge(status)}</td>
+      <td>
+        <button class="view-pic-btn" onclick="openImageModal(${index})">View Picture</button>
+      </td>
+    `;
+    employeeTableBody.appendChild(row);
+    return;
+  }
+
   const search = `${getCombinedSearch()} ${employeeSearchInput.value}`.trim();
   const filtered = getFilteredEmployees(search, statusFilter.value, departmentFilter.value);
-  employeeTableBody.innerHTML = "";
   emptyState.style.display = filtered.length ? "none" : "block";
 
   filtered.forEach((emp) => {
@@ -770,9 +925,38 @@ function renderDashboardTable() {
 }
 
 function renderEmployeesSection() {
-  const search = `${getCombinedSearch()} ${employeesPageSearchInput.value}`.toLowerCase().trim();
-  const filtered = state.employees.filter((emp) => `${emp.name} ${emp.id} ${emp.department} ${emp.position}`.toLowerCase().includes(search));
   employeesOnlyTableBody.innerHTML = "";
+
+  if (isEmployee()) {
+    const emp = getCurrentEmployee();
+    if (!emp) return;
+
+    const index = state.employees.findIndex((item) => item.id === emp.id);
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${getEmployeePhotoHTML(emp)}</td>
+      <td>${emp.id}</td>
+      <td>${emp.name}</td>
+      <td>${emp.department}</td>
+      <td>${emp.position}</td>
+      <td>${formatCurrency(emp.salary)}</td>
+      <td>A:${emp.leaveBalances.annual} / S:${emp.leaveBalances.sick}</td>
+      <td>
+        <button class="view-pic-btn" onclick="openImageModal(${index})">View Picture</button>
+        <button class="profile-btn" onclick="openProfileModal(${index})">Profile</button>
+        <button class="history-btn" onclick="openHistoryModal(${index})">History</button>
+        <button class="calendar-btn" onclick="openCalendarModal(${index})">Calendar</button>
+      </td>
+    `;
+    employeesOnlyTableBody.appendChild(row);
+    return;
+  }
+
+  const search = `${getCombinedSearch()} ${employeesPageSearchInput.value}`.toLowerCase().trim();
+  const filtered = state.employees.filter((emp) =>
+    `${emp.name} ${emp.id} ${emp.department} ${emp.position}`.toLowerCase().includes(search)
+  );
+
   filtered.forEach((emp) => {
     const index = state.employees.findIndex((item) => item.id === emp.id);
     const row = document.createElement("tr");
@@ -800,83 +984,158 @@ function renderAttendanceSection() {
   const search = attendanceSearchInput.value.toLowerCase().trim();
   attendanceTableBody.innerHTML = "";
 
-  state.employees
-    .filter((emp) => `${emp.name} ${emp.id} ${emp.department}`.toLowerCase().includes(search))
-    .forEach((emp) => {
-      const lateDays = getLateDaysForMonth(emp.id, selectedMonth);
-      const absentDays = getAbsentDaysForMonth(emp.id, selectedMonth);
-      const rate = getAttendanceRate(emp.id, selectedMonth);
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${emp.id}</td>
-        <td>${emp.name}</td>
-        <td>${emp.department}</td>
-        <td>${lateDays}</td>
-        <td>${absentDays}</td>
-        <td>${rate}%</td>
-      `;
-      attendanceTableBody.appendChild(row);
-    });
+  let rows = state.employees;
+
+  if (isEmployee()) {
+    const emp = getCurrentEmployee();
+    rows = emp ? [emp] : [];
+    attendanceEmployee.value = emp?.id || "";
+    attendanceEmployee.disabled = true;
+    attendanceStatusSelect.disabled = true;
+    markAttendanceBtn.style.display = "none";
+    clearSingleAttendanceBtn.style.display = "none";
+    clearAllAttendanceForDateBtn.style.display = "none";
+  } else {
+    attendanceEmployee.disabled = false;
+    attendanceStatusSelect.disabled = false;
+    markAttendanceBtn.style.display = "inline-block";
+    clearSingleAttendanceBtn.style.display = "inline-block";
+    clearAllAttendanceForDateBtn.style.display = "inline-block";
+    rows = rows.filter((emp) =>
+      `${emp.name} ${emp.id} ${emp.department}`.toLowerCase().includes(search)
+    );
+  }
+
+  rows.forEach((emp) => {
+    const lateDays = getLateDaysForMonth(emp.id, selectedMonth);
+    const absentDays = getAbsentDaysForMonth(emp.id, selectedMonth);
+    const rate = getAttendanceRate(emp.id, selectedMonth);
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${emp.id}</td>
+      <td>${emp.name}</td>
+      <td>${emp.department}</td>
+      <td>${lateDays}</td>
+      <td>${absentDays}</td>
+      <td>${rate}%</td>
+    `;
+    attendanceTableBody.appendChild(row);
+  });
 }
 
 function renderLeaveSection() {
   const search = leaveSearchInput.value.toLowerCase().trim();
   leaveTableBody.innerHTML = "";
-  const rows = state.leaveRecords.filter((record) => `${record.leaveId} ${record.employeeName} ${record.leaveType} ${record.status}`.toLowerCase().includes(search));
+
+  let rows = state.leaveRecords;
+
+  if (isEmployee()) {
+    const emp = getCurrentEmployee();
+    rows = emp ? rows.filter((record) => record.employeeId === emp.id) : [];
+    leaveEmployee.value = emp?.id || "";
+    leaveEmployee.disabled = true;
+  } else {
+    leaveEmployee.disabled = false;
+    rows = rows.filter((record) =>
+      `${record.leaveId} ${record.employeeName} ${record.leaveType} ${record.status}`.toLowerCase().includes(search)
+    );
+  }
+
   leaveEmptyState.style.display = rows.length ? "none" : "block";
 
-  rows.slice().sort((a, b) => new Date(b.startDate) - new Date(a.startDate)).forEach((record) => {
-    const index = state.leaveRecords.findIndex((item) => item.leaveId === record.leaveId);
-    const statusClass = record.status === "Approved" ? "present" : record.status === "Rejected" ? "rejected-status" : "pending-status";
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${record.leaveId}</td>
-      <td>${record.employeeName}</td>
-      <td>${record.leaveType}</td>
-      <td>${record.days}</td>
-      <td>${record.balanceAfter ?? "-"}</td>
-      <td>${record.startDate}</td>
-      <td>${record.endDate}</td>
-      <td><span class="status ${statusClass}">${record.status}</span></td>
-      <td>
-        <button class="approve-btn action-btn" onclick="approveLeave(${index})">Approve</button>
-        <button class="reject-btn action-btn" onclick="rejectLeave(${index})">Reject</button>
-        <button class="delete-btn action-btn" onclick="deleteLeave(${index})">Delete</button>
-      </td>
-    `;
-    leaveTableBody.appendChild(row);
-  });
+  rows
+    .slice()
+    .sort((a, b) => new Date(b.startDate) - new Date(a.startDate))
+    .forEach((record) => {
+      const index = state.leaveRecords.findIndex((item) => item.leaveId === record.leaveId);
+      const statusClass =
+        record.status === "Approved" ? "present" :
+        record.status === "Rejected" ? "rejected-status" :
+        "pending-status";
+
+      const actions = isEmployee()
+        ? `<span class="muted-text">View Only</span>`
+        : `
+          <button class="approve-btn action-btn" onclick="approveLeave(${index})">Approve</button>
+          <button class="reject-btn action-btn" onclick="rejectLeave(${index})">Reject</button>
+          <button class="delete-btn action-btn" onclick="deleteLeave(${index})">Delete</button>
+        `;
+
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${record.leaveId}</td>
+        <td>${record.employeeName}</td>
+        <td>${record.leaveType}</td>
+        <td>${record.days}</td>
+        <td>${record.balanceAfter ?? "-"}</td>
+        <td>${record.startDate}</td>
+        <td>${record.endDate}</td>
+        <td><span class="status ${statusClass}">${record.status}</span></td>
+        <td>${actions}</td>
+      `;
+      leaveTableBody.appendChild(row);
+    });
 }
 
 function renderPayrollReceiptsTable() {
   const search = payrollSearchInput.value.toLowerCase().trim();
-  const rows = state.payrollReceipts.filter((r) => `${r.receiptId} ${r.employeeName} ${r.month}`.toLowerCase().includes(search));
+
+  let rows = state.payrollReceipts;
+
+  if (isEmployee()) {
+    const emp = getCurrentEmployee();
+    rows = emp ? rows.filter((r) => r.employeeId === emp.id) : [];
+    payrollEmployee.value = emp?.id || "";
+    payrollEmployee.disabled = true;
+    allowances.disabled = true;
+    deductions.disabled = true;
+    payrollMonth.disabled = false;
+    payrollForm.querySelector("button[type='submit']").style.display = "none";
+  } else {
+    payrollEmployee.disabled = false;
+    allowances.disabled = false;
+    deductions.disabled = false;
+    payrollForm.querySelector("button[type='submit']").style.display = "block";
+    rows = rows.filter((r) =>
+      `${r.receiptId} ${r.employeeName} ${r.month}`.toLowerCase().includes(search)
+    );
+  }
+
   payrollReceiptsTableBody.innerHTML = "";
   payrollReceiptsEmptyState.style.display = rows.length ? "none" : "block";
 
-  rows.slice().sort((a, b) => new Date(b.createdDate) - new Date(a.createdDate)).forEach((receipt) => {
-    const index = state.payrollReceipts.findIndex((item) => item.receiptId === receipt.receiptId);
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${receipt.receiptId}</td>
-      <td>${receipt.employeeName}</td>
-      <td>${receipt.month}</td>
-      <td>${formatCurrency(receipt.baseSalary)}</td>
-      <td>${formatCurrency(receipt.allowances)}</td>
-      <td>${formatCurrency(receipt.deductions)}</td>
-      <td>${formatCurrency(receipt.netPay)}</td>
-      <td>${receipt.createdDate}</td>
-      <td>
-        <button class="profile-btn" onclick="viewPayrollReceipt(${index})">View</button>
-        <button class="delete-btn action-btn" onclick="deletePayrollReceipt(${index})">Delete</button>
-      </td>
-    `;
-    payrollReceiptsTableBody.appendChild(row);
-  });
+  rows
+    .slice()
+    .sort((a, b) => new Date(b.createdDate) - new Date(a.createdDate))
+    .forEach((receipt) => {
+      const index = state.payrollReceipts.findIndex((item) => item.receiptId === receipt.receiptId);
+
+      const actions = isEmployee()
+        ? `<button class="profile-btn" onclick="viewPayrollReceipt(${index})">View</button>`
+        : `
+          <button class="profile-btn" onclick="viewPayrollReceipt(${index})">View</button>
+          <button class="delete-btn action-btn" onclick="deletePayrollReceipt(${index})">Delete</button>
+        `;
+
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${receipt.receiptId}</td>
+        <td>${receipt.employeeName}</td>
+        <td>${receipt.month}</td>
+        <td>${formatCurrency(receipt.baseSalary)}</td>
+        <td>${formatCurrency(receipt.allowances)}</td>
+        <td>${formatCurrency(receipt.deductions)}</td>
+        <td>${formatCurrency(receipt.netPay)}</td>
+        <td>${receipt.createdDate}</td>
+        <td>${actions}</td>
+      `;
+      payrollReceiptsTableBody.appendChild(row);
+    });
 }
 
 function renderPerformanceTable() {
   const search = (performanceSearchInput.value || "").toLowerCase().trim();
+
   const rows = state.employees.filter((emp) => {
     const perf = emp.performance || {};
     return `${emp.id} ${emp.name} ${emp.department} ${perf.managerComment || ""}`.toLowerCase().includes(search);
@@ -902,7 +1161,26 @@ function renderPerformanceTable() {
 
 function renderNotifications() {
   const search = notificationSearchInput.value.toLowerCase().trim();
-  const rows = state.notifications.filter((item) => `${item.title} ${item.message}`.toLowerCase().includes(search));
+
+  let rows = state.notifications;
+  if (isEmployee()) {
+    const emp = getCurrentEmployee();
+    rows = emp
+      ? state.notifications.filter(
+          (item) =>
+            `${item.title} ${item.message}`.toLowerCase().includes(search) &&
+            (
+              item.message.toLowerCase().includes(emp.name.toLowerCase()) ||
+              !item.message.toLowerCase().includes("admin")
+            )
+        )
+      : [];
+  } else {
+    rows = state.notifications.filter((item) =>
+      `${item.title} ${item.message}`.toLowerCase().includes(search)
+    );
+  }
+
   notificationsList.innerHTML = rows.length ? "" : `<div class="empty-state">No notifications found.</div>`;
   rows.forEach((item) => {
     const div = document.createElement("div");
@@ -928,7 +1206,10 @@ function renderDepartmentsTable() {
 
 function renderUsersTable() {
   const search = (userSearchInput?.value || "").toLowerCase().trim();
-  const rows = state.users.filter((user) => `${user.fullName} ${user.username} ${user.role}`.toLowerCase().includes(search));
+  const rows = state.users.filter((user) =>
+    `${user.fullName} ${user.username} ${user.role} ${user.employeeId || ""}`.toLowerCase().includes(search)
+  );
+
   usersTableBody.innerHTML = "";
   usersEmptyState.style.display = rows.length ? "none" : "block";
 
@@ -938,9 +1219,9 @@ function renderUsersTable() {
     const cannotDeleteLastAdmin = user.role === "admin" && adminCount === 1;
     const row = document.createElement("tr");
     row.innerHTML = `
-      <td>${user.fullName}</td>
+      <td>${user.fullName}${user.employeeId ? `<br><small class="muted-text">${user.employeeId}</small>` : ""}</td>
       <td>${user.username}</td>
-      <td><span class="status ${user.role === "admin" ? "pending-status" : "present"}">${user.role.toUpperCase()}</span></td>
+      <td><span class="status ${user.role === "admin" ? "pending-status" : user.role === "employee" ? "leave-status" : "present"}">${user.role.toUpperCase()}</span></td>
       <td>${formatNiceDate(user.createdAt)}</td>
       <td>
         ${cannotDeleteDefaultAdmin || cannotDeleteLastAdmin ? `<span class="muted-text">Protected</span>` : `<button class="delete-btn action-btn" onclick="deleteUserAccount('${user.id}')">Delete</button>`}
@@ -1276,7 +1557,14 @@ async function deletePayrollReceipt(index) {
 
 function getExportRows() {
   const selectedMonth = monthFilter.value || getCurrentMonthValue();
-  return state.employees.map((emp) => ({
+
+  let employees = state.employees;
+  if (isEmployee()) {
+    const emp = getCurrentEmployee();
+    employees = emp ? [emp] : [];
+  }
+
+  return employees.map((emp) => ({
     "Employee ID": emp.id,
     Name: emp.name,
     Department: emp.department,
@@ -1343,8 +1631,14 @@ async function generatePayslip() {
   const employeeIdValue = payrollEmployee.value;
   const monthValue = payrollMonth.value;
   if (!employeeIdValue || !monthValue) return alert("Please select employee and month.");
+
   const emp = getEmployeeById(employeeIdValue);
   if (!emp) return;
+
+  if (isEmployee()) {
+    return alert("Employees cannot generate payroll.");
+  }
+
   const allowanceValue = Number(allowances.value || 0);
   const deductionValue = Number(deductions.value || 0);
   const baseSalary = Number(emp.salary || 0);
@@ -1399,21 +1693,59 @@ function generateUserId() {
   return `USR${Date.now().toString().slice(-6)}`;
 }
 
+function toggleEmployeeLinkField() {
+  if (!accountRole || !accountEmployeeGroup) return;
+  const show = accountRole.value === "employee";
+  accountEmployeeGroup.style.display = show ? "block" : "none";
+  if (!show && accountEmployeeId) {
+    accountEmployeeId.value = "";
+  }
+}
+
 async function createUserAccount() {
   if (!isAdmin()) return alert("Only admin can create accounts.");
+
   const fullName = accountFullName.value.trim();
   const username = accountUsername.value.trim();
   const password = accountPassword.value.trim();
   const role = accountRole.value;
-  if (!fullName || !username || !password || !role) return alert("Please fill all account fields.");
+  const linkedEmployeeId = accountEmployeeId?.value || "";
+
+  if (!fullName || !username || !password || !role) {
+    return alert("Please fill all account fields.");
+  }
+
   const usernameExists = state.users.some((user) => user.username.toLowerCase() === username.toLowerCase());
   if (usernameExists) return alert("Username already exists.");
-  state.users.push({ id: generateUserId(), fullName, username, password, role, employeeId: null, createdAt: new Date().toISOString() });
+
+  if (role === "employee") {
+    if (!linkedEmployeeId) return alert("Please link this account to an employee.");
+
+    const employeeExists = state.employees.some((emp) => emp.id === linkedEmployeeId);
+    if (!employeeExists) return alert("Selected employee was not found.");
+
+    const alreadyLinked = state.users.some(
+      (user) => user.role === "employee" && user.employeeId === linkedEmployeeId
+    );
+    if (alreadyLinked) return alert("That employee already has an account.");
+  }
+
+  state.users.push({
+    id: generateUserId(),
+    fullName,
+    username,
+    password,
+    role,
+    employeeId: role === "employee" ? linkedEmployeeId : null,
+    createdAt: new Date().toISOString()
+  });
+
   addNotification("Account Created", `${fullName} was added as ${role.toUpperCase()}.`);
   await saveState();
   renderUsersTable();
   renderDashboardNotifications();
   userAccountForm.reset();
+  toggleEmployeeLinkField();
 }
 
 async function deleteUserAccount(userId) {
@@ -1495,6 +1827,19 @@ function showSection(sectionId) {
     showSection("dashboardSection");
     return;
   }
+  if (sectionId === "settingsSection" && isEmployee()) {
+    showSection("dashboardSection");
+    return;
+  }
+  if (sectionId === "reportsSection" && isEmployee()) {
+    showSection("dashboardSection");
+    return;
+  }
+  if (sectionId === "performanceSection" && isEmployee()) {
+    showSection("dashboardSection");
+    return;
+  }
+
   document.querySelectorAll(".page-section").forEach((section) => section.classList.remove("active-section"));
   document.querySelectorAll(".nav-item").forEach((item) => item.classList.toggle("active", item.dataset.section === sectionId));
   $(sectionId).classList.add("active-section");
@@ -1528,6 +1873,11 @@ async function deleteDepartment(dep) {
 async function createLeaveRequest(employeeIdValue, leaveTypeValue, startDateValue, endDateValue, reasonValue) {
   const emp = getEmployeeById(employeeIdValue);
   if (!emp) return;
+
+  if (isEmployee() && currentUser?.employeeId !== emp.id) {
+    return alert("You can only request leave for your own account.");
+  }
+
   if (!leaveTypeValue || !startDateValue || !endDateValue) return alert("Please fill in all leave fields.");
   if (endDateValue < startDateValue) return alert("End date cannot be before start date.");
   const days = diffDays(startDateValue, endDateValue);
@@ -1581,6 +1931,7 @@ async function deleteEmployee(index) {
   state.attendanceRecords = state.attendanceRecords.filter((r) => r.employeeId !== emp.id);
   state.leaveRecords = state.leaveRecords.filter((r) => r.employeeId !== emp.id);
   state.payrollReceipts = state.payrollReceipts.filter((r) => r.employeeId !== emp.id);
+  state.users = state.users.filter((u) => u.employeeId !== emp.id);
   addNotification("Employee Deleted", `${emp.name} was removed from the system.`);
   await saveState();
   renderAll();
@@ -1631,6 +1982,11 @@ async function savePerformanceRecord() {
   if (!ratingValue || ratingValue < 1 || ratingValue > 5) return alert("Rating must be between 1 and 5.");
   const emp = getEmployeeById(employeeIdValue);
   if (!emp) return;
+
+  if (isEmployee()) {
+    return alert("Employees cannot edit performance records.");
+  }
+
   emp.performance = {
     rating: ratingValue,
     tasksCompleted: Number(tasksCompleted.value || 0),
@@ -1703,6 +2059,10 @@ leaveForm.addEventListener("submit", async function (e) {
   e.preventDefault();
   await createLeaveRequest(leaveEmployee.value, leaveType.value, leaveStartDate.value, leaveEndDate.value, leaveReason.value);
   leaveForm.reset();
+  if (isEmployee()) {
+    const emp = getCurrentEmployee();
+    if (emp) leaveEmployee.value = emp.id;
+  }
 });
 
 payrollForm.addEventListener("submit", async function (e) {
@@ -1764,6 +2124,7 @@ performanceSearchInput.addEventListener("input", renderPerformanceTable);
 userSearchInput.addEventListener("input", renderUsersTable);
 departmentFilter.addEventListener("change", renderDashboardTable);
 statusFilter.addEventListener("change", renderDashboardTable);
+
 monthFilter.addEventListener("change", function () {
   renderAttendanceSection();
   updateAnalyticsCards();
@@ -1772,10 +2133,12 @@ monthFilter.addEventListener("change", function () {
     renderLateChart();
   }
 });
+
 attendanceDate.addEventListener("change", function () {
   updateSummary();
   renderDashboardTable();
 });
+
 historyMonthFilter.addEventListener("change", renderHistoryTable);
 calendarMonthFilter.addEventListener("change", renderAttendanceCalendar);
 resetBtn.addEventListener("click", resetEmployeeForm);
@@ -1795,6 +2158,7 @@ restoreInput.addEventListener("change", function (e) { if (e.target.files[0]) re
 logoutBtn.addEventListener("click", logout);
 addDepartmentBtn.addEventListener("click", addDepartment);
 userAccountForm.addEventListener("submit", async function (e) { e.preventDefault(); await createUserAccount(); });
+accountRole.addEventListener("change", toggleEmployeeLinkField);
 forgotPasswordBtn.addEventListener("click", () => forgotPasswordModal.classList.add("show"));
 closeForgotPasswordModal.addEventListener("click", () => closeModal(forgotPasswordModal));
 closeImageModal.addEventListener("click", () => closeModal(imageModal));
@@ -1820,6 +2184,7 @@ async function initApp() {
   if (hasInitialized) return;
   hasInitialized = true;
   state = await loadState();
+  toggleEmployeeLinkField();
   checkLoginState();
 }
 
