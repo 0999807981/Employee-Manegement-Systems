@@ -207,6 +207,8 @@ const statusFilter = $("statusFilter");
 const submitBtn = $("submitBtn");
 const resetBtn = $("resetBtn");
 
+const payrollFormSection = $("payrollFormSection");
+
 const actionMenuBtn = $("actionMenuBtn");
 const actionDropdown = $("actionDropdown");
 const darkModeToggle = $("darkModeToggle");
@@ -1121,23 +1123,27 @@ function renderPayrollReceiptsTable() {
   const search = payrollSearchInput.value.toLowerCase().trim();
   let rows = state.payrollReceipts;
 
-  if (isEmployee()) {
-    const emp = getCurrentEmployee();
-    rows = emp ? rows.filter((r) => r.employeeId === emp.id) : [];
-    payrollEmployee.value = emp?.id || "";
-    payrollEmployee.disabled = true;
-    allowances.disabled = true;
-    deductions.disabled = true;
-    payrollForm.querySelector("button[type='submit']").style.display = "none";
-  } else {
-    payrollEmployee.disabled = false;
-    allowances.disabled = false;
-    deductions.disabled = false;
-    payrollForm.querySelector("button[type='submit']").style.display = "block";
-    rows = rows.filter((r) =>
-      `${r.receiptId} ${r.employeeName} ${r.month}`.toLowerCase().includes(search)
-    );
-  }
+ if (isEmployee()) {
+  const emp = getCurrentEmployee();
+  rows = emp ? rows.filter((r) => r.employeeId === emp.id) : [];
+
+  payrollEmployee.value = emp?.id || "";
+  payrollEmployee.disabled = true;
+  allowances.disabled = true;
+  deductions.disabled = true;
+
+  if (payrollFormSection) payrollFormSection.style.display = "none";
+} else {
+  payrollEmployee.disabled = false;
+  allowances.disabled = false;
+  deductions.disabled = false;
+
+  if (payrollFormSection) payrollFormSection.style.display = "block";
+
+  rows = rows.filter((r) =>
+    `${r.receiptId} ${r.employeeName} ${r.month}`.toLowerCase().includes(search)
+  );
+}
 
   payrollReceiptsTableBody.innerHTML = "";
   payrollReceiptsEmptyState.style.display = rows.length ? "none" : "block";
