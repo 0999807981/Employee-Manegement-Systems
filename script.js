@@ -1,4 +1,4 @@
-const STORAGE_KEY = "emsProStateV3";
+const STORAGE_KEY = "emsProStateV2";
 
 const defaultState = {
   settings: {
