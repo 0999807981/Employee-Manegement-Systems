@@ -844,15 +844,21 @@ function renderDashboardNotifications() {
   dashboardNotifications.innerHTML = "";
 
   let rows = state.notifications;
+
   if (isEmployee()) {
     const emp = getCurrentEmployee();
-    rows = emp
-      ? state.notifications.filter(
-          (item) =>
-            item.message.toLowerCase().includes(emp.name.toLowerCase()) ||
-            !item.message.toLowerCase().includes("admin")
-        )
-      : [];
+    if (!emp) {
+      dashboardNotifications.innerHTML = `<div class="empty-state">No notifications yet.</div>`;
+      return;
+    }
+
+    rows = state.notifications.filter((item) => {
+      const text = `${item.title} ${item.message}`.toLowerCase();
+      return (
+        text.includes(emp.name.toLowerCase()) ||
+        text.includes(emp.id.toLowerCase())
+      );
+    });
   }
 
   rows.slice(0, 5).forEach((item) => {
@@ -861,7 +867,10 @@ function renderDashboardNotifications() {
     div.innerHTML = `<h4>${item.title}</h4><p>${item.message}</p>`;
     dashboardNotifications.appendChild(div);
   });
-  if (!rows.length) dashboardNotifications.innerHTML = `<div class="empty-state">No notifications yet.</div>`;
+
+  if (!rows.length) {
+    dashboardNotifications.innerHTML = `<div class="empty-state">No notifications yet.</div>`;
+  }
 }
 
 function getStatusBadge(status) {
@@ -1165,20 +1174,24 @@ function renderPerformanceTable() {
 
 function renderNotifications() {
   const search = notificationSearchInput.value.toLowerCase().trim();
-
   let rows = state.notifications;
+
   if (isEmployee()) {
     const emp = getCurrentEmployee();
-    rows = emp
-      ? state.notifications.filter(
-          (item) =>
-            `${item.title} ${item.message}`.toLowerCase().includes(search) &&
-            (
-              item.message.toLowerCase().includes(emp.name.toLowerCase()) ||
-              !item.message.toLowerCase().includes("admin")
-            )
-        )
-      : [];
+    if (!emp) {
+      notificationsList.innerHTML = `<div class="empty-state">No notifications found.</div>`;
+      return;
+    }
+
+    rows = state.notifications.filter((item) => {
+      const text = `${item.title} ${item.message}`.toLowerCase();
+      const matchesEmployee =
+        text.includes(emp.name.toLowerCase()) ||
+        text.includes(emp.id.toLowerCase());
+
+      const matchesSearch = text.includes(search);
+      return matchesEmployee && matchesSearch;
+    });
   } else {
     rows = state.notifications.filter((item) =>
       `${item.title} ${item.message}`.toLowerCase().includes(search)
@@ -1186,10 +1199,15 @@ function renderNotifications() {
   }
 
   notificationsList.innerHTML = rows.length ? "" : `<div class="empty-state">No notifications found.</div>`;
+
   rows.forEach((item) => {
     const div = document.createElement("div");
     div.className = "notification-item";
-    div.innerHTML = `<h4>${item.title}</h4><p>${item.message}</p><p>${formatNiceDate(item.createdAt)}</p>`;
+    div.innerHTML = `
+      <h4>${item.title}</h4>
+      <p>${item.message}</p>
+      <p>${formatNiceDate(item.createdAt)}</p>
+    `;
     notificationsList.appendChild(div);
   });
 }
