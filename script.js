@@ -665,7 +665,7 @@ function updateSummary() {
   $("leaveEmployees").textContent = state.employees.filter((emp) => isApprovedLeaveOnDate(emp.id, today)).length;
   $("pendingLeaveCount").textContent = state.leaveRecords.filter((r) => r.status === "Pending").length;
   $("payrollReceiptCount").textContent = state.payrollReceipts.length;
-  dashboardDateText.textContent = `Date: ${formatNiceDate(today)} • Storage: ${currentStorageMode === "supabase" ? "Supabase" : "Local"}`;
+  dashboardDateText.textContent = `Date: ${formatNiceDate(today)}`;
 }
 
 function updateAnalyticsCards() {
