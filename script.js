@@ -541,6 +541,9 @@ function checkLoginState() {
     loginScreen.classList.remove("show");
     appContainer.style.display = "grid";
     applyRolePermissions();
+    if (isEmployee()) {
+  showSection("employeesSection");
+}
     renderAll();
   } else {
     loginScreen.classList.add("show");
@@ -641,6 +644,7 @@ function applyRolePermissions() {
     exportPdfBtn.style.display = "block";
     globalSearchInput.parentElement.style.display = "block";
   } else if (isEmployee()) {
+    hideNav("dashboardSection");
     hideNav("performanceSection");
     hideNav("reportsSection");
     hideNav("settingsSection");
