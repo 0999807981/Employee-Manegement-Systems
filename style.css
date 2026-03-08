@@ -335,13 +335,15 @@ textarea,
   color: white;
 }
 
-.blue-card { background: linear-gradient(135deg, #2563eb, #1e40af); }
-.green-card { background: linear-gradient(135deg, #10b981, #047857); }
-.red-card { background: linear-gradient(135deg, #ef4444, #b91c1c); }
-.purple-card { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
-.yellow-card { background: linear-gradient(135deg, #f59e0b, #d97706); }
-.teal-card { background: linear-gradient(135deg, #0891b2, #155e75); }
-.orange-card { background: linear-gradient(135deg, #fb923c, #ea580c); }
+.blue-card,
+.green-card,
+.red-card,
+.purple-card,
+.yellow-card,
+.teal-card,
+.orange-card {
+  background: linear-gradient(135deg, #0f172a, #111827);
+}
 
 .card h3 {
   font-size: 14px;
