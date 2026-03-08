@@ -79,7 +79,7 @@ const SECTION_TITLES = {
   employeesSection: "Employees",
   attendanceSection: "Attendance",
   leaveSection: "Leave Management",
-  payrollSection: "Payroll",
+  payrollSection: "My Payslip",
   performanceSection: "Employee Performance",
   reportsSection: "Reports",
   notificationsSection: "Notifications",
@@ -194,6 +194,8 @@ const allowances = $("allowances");
 const deductions = $("deductions");
 const payslipCard = $("payslipCard");
 const printPayslipBtn = $("printPayslipBtn");
+const payrollPreviewTitle = $("payrollPreviewTitle");
+const payrollHistoryTitle = $("payrollHistoryTitle");
 
 const performanceForm = $("performanceForm");
 const performanceEmployee = $("performanceEmployee");
@@ -206,8 +208,6 @@ const departmentFilter = $("departmentFilter");
 const statusFilter = $("statusFilter");
 const submitBtn = $("submitBtn");
 const resetBtn = $("resetBtn");
-
-const payrollFormSection = $("payrollFormSection");
 
 const actionMenuBtn = $("actionMenuBtn");
 const actionDropdown = $("actionDropdown");
@@ -631,7 +631,7 @@ function configureNavForCurrentRole() {
     employeesSection: isEmployee() ? "My Profile" : "Employees",
     attendanceSection: isEmployee() ? "My Attendance" : "Attendance",
     leaveSection: isEmployee() ? "My Leave" : "Leave",
-    payrollSection: isEmployee() ? "My Payslips" : "Payroll",
+    payrollSection: isEmployee() ? "My Payslip" : "Payroll",
     performanceSection: "Performance",
     reportsSection: "Reports",
     notificationsSection: "Notifications",
@@ -1119,31 +1119,57 @@ function renderLeaveSection() {
     });
 }
 
+function showLatestEmployeePayslip() {
+  if (!isEmployee()) return;
+
+  const emp = getCurrentEmployee();
+  if (!emp) return;
+
+  const employeeReceipts = state.payrollReceipts
+    .filter((r) => r.employeeId === emp.id)
+    .sort((a, b) => new Date(b.createdDate) - new Date(a.createdDate));
+
+  if (!employeeReceipts.length) {
+    payslipCard.innerHTML = `<p>No payslip generated yet.</p>`;
+    return;
+  }
+
+  const receipt = employeeReceipts[0];
+
+  payslipCard.innerHTML = `
+    <h3>Salary Slip</h3>
+    <div class="payslip-row"><span>Employee</span><strong>${receipt.employeeName}</strong></div>
+    <div class="payslip-row"><span>Receipt ID</span><strong>${receipt.receiptId}</strong></div>
+    <div class="payslip-row"><span>Month</span><strong>${receipt.month}</strong></div>
+    <div class="payslip-row"><span>Base Salary</span><strong>${formatCurrency(receipt.baseSalary)}</strong></div>
+    <div class="payslip-row"><span>Allowances</span><strong>${formatCurrency(receipt.allowances)}</strong></div>
+    <div class="payslip-row"><span>Deductions</span><strong>${formatCurrency(receipt.deductions)}</strong></div>
+    <div class="payslip-total">Net Pay: ${formatCurrency(receipt.netPay)}</div>
+  `;
+}
+
 function renderPayrollReceiptsTable() {
   const search = payrollSearchInput.value.toLowerCase().trim();
   let rows = state.payrollReceipts;
 
- if (isEmployee()) {
-  const emp = getCurrentEmployee();
-  rows = emp ? rows.filter((r) => r.employeeId === emp.id) : [];
+  if (isEmployee()) {
+    const emp = getCurrentEmployee();
+    rows = emp ? rows.filter((r) => r.employeeId === emp.id) : [];
 
-  payrollEmployee.value = emp?.id || "";
-  payrollEmployee.disabled = true;
-  allowances.disabled = true;
-  deductions.disabled = true;
+    if (payrollPreviewTitle) payrollPreviewTitle.textContent = "My Payslip";
+    if (payrollHistoryTitle) payrollHistoryTitle.textContent = "My Payslip History";
 
-  if (payrollFormSection) payrollFormSection.style.display = "none";
-} else {
-  payrollEmployee.disabled = false;
-  allowances.disabled = false;
-  deductions.disabled = false;
+    rows = rows.filter((r) =>
+      `${r.receiptId} ${r.employeeName} ${r.month}`.toLowerCase().includes(search)
+    );
+  } else {
+    if (payrollPreviewTitle) payrollPreviewTitle.textContent = "Payslip Preview";
+    if (payrollHistoryTitle) payrollHistoryTitle.textContent = "Payroll Receipts History";
 
-  if (payrollFormSection) payrollFormSection.style.display = "block";
-
-  rows = rows.filter((r) =>
-    `${r.receiptId} ${r.employeeName} ${r.month}`.toLowerCase().includes(search)
-  );
-}
+    rows = rows.filter((r) =>
+      `${r.receiptId} ${r.employeeName} ${r.month}`.toLowerCase().includes(search)
+    );
+  }
 
   payrollReceiptsTableBody.innerHTML = "";
   payrollReceiptsEmptyState.style.display = rows.length ? "none" : "block";
@@ -1153,6 +1179,7 @@ function renderPayrollReceiptsTable() {
     .sort((a, b) => new Date(b.createdDate) - new Date(a.createdDate))
     .forEach((receipt) => {
       const index = state.payrollReceipts.findIndex((item) => item.receiptId === receipt.receiptId);
+
       const actions = isEmployee()
         ? `<button class="profile-btn" onclick="viewPayrollReceipt(${index})">View</button>`
         : `
@@ -1174,6 +1201,10 @@ function renderPayrollReceiptsTable() {
       `;
       payrollReceiptsTableBody.appendChild(row);
     });
+
+  if (isEmployee()) {
+    showLatestEmployeePayslip();
+  }
 }
 
 function renderPerformanceTable() {
@@ -1829,8 +1860,8 @@ function restoreData(file) {
 }
 
 async function generatePayslip() {
-  const employeeIdValue = payrollEmployee.value;
-  const monthValue = payrollMonth.value;
+  const employeeIdValue = payrollEmployee?.value;
+  const monthValue = payrollMonth?.value;
   if (!employeeIdValue || !monthValue) return alert("Please select employee and month.");
 
   const emp = getEmployeeById(employeeIdValue);
@@ -1838,8 +1869,8 @@ async function generatePayslip() {
 
   if (isEmployee()) return alert("Employees cannot generate payroll.");
 
-  const allowanceValue = Number(allowances.value || 0);
-  const deductionValue = Number(deductions.value || 0);
+  const allowanceValue = Number(allowances?.value || 0);
+  const deductionValue = Number(deductions?.value || 0);
   const baseSalary = Number(emp.salary || 0);
   const netPay = baseSalary + allowanceValue - deductionValue;
   const createdDate = getCurrentDateValue();
@@ -2135,7 +2166,12 @@ function showSection(sectionId) {
   document.querySelectorAll(".nav-item").forEach((item) => item.classList.toggle("active", item.dataset.section === sectionId));
 
   $(sectionId).classList.add("active-section");
-  pageTitle.textContent = SECTION_TITLES[sectionId] || "Employee Management Dashboard";
+
+  if (isEmployee() && sectionId === "payrollSection") {
+    pageTitle.textContent = "My Payslip";
+  } else {
+    pageTitle.textContent = SECTION_TITLES[sectionId] || "Employee Management Dashboard";
+  }
 
   if (mobileSectionSelect) mobileSectionSelect.value = sectionId;
 
