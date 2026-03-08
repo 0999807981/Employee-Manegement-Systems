@@ -70,7 +70,8 @@ const defaultState = {
   attendanceRecords: [],
   leaveRecords: [],
   payrollReceipts: [],
-  notifications: []
+  notifications: [],
+  announcements: []
 };
 
 const SECTION_TITLES = {
@@ -82,6 +83,8 @@ const SECTION_TITLES = {
   performanceSection: "Employee Performance",
   reportsSection: "Reports",
   notificationsSection: "Notifications",
+  announcementsSection: "Announcements",
+  changePasswordSection: "Change Password",
   settingsSection: "System Settings"
 };
 
@@ -143,6 +146,7 @@ const leaveSearchInput = $("leaveSearchInput");
 const payrollSearchInput = $("payrollSearchInput");
 const notificationSearchInput = $("notificationSearchInput");
 const performanceSearchInput = $("performanceSearchInput");
+const announcementSearchInput = $("announcementSearchInput");
 
 const pageTitle = $("pageTitle");
 const roleText = $("roleText");
@@ -165,6 +169,8 @@ const departmentsTableBody = $("departmentsTableBody");
 const usersTableBody = $("usersTableBody");
 const usersEmptyState = $("usersEmptyState");
 const userSearchInput = $("userSearchInput");
+const announcementsList = $("announcementsList");
+const announcementsEmptyState = $("announcementsEmptyState");
 
 const attendanceDate = $("attendanceDate");
 const attendanceEmployee = $("attendanceEmployee");
@@ -225,6 +231,30 @@ const accountRole = $("accountRole");
 const accountEmployeeGroup = $("accountEmployeeGroup");
 const accountEmployeeId = $("accountEmployeeId");
 
+const employeeAdminView = $("employeeAdminView");
+const employeeSelfProfileView = $("employeeSelfProfileView");
+const employeeSelfProfileForm = $("employeeSelfProfileForm");
+const employeeSelfProfileCard = $("employeeSelfProfileCard");
+const selfEmployeeId = $("selfEmployeeId");
+const selfEmployeeName = $("selfEmployeeName");
+const selfEmployeeDepartment = $("selfEmployeeDepartment");
+const selfEmployeePosition = $("selfEmployeePosition");
+const selfPhone = $("selfPhone");
+const selfEmail = $("selfEmail");
+const selfAddress = $("selfAddress");
+const selfEmergencyContact = $("selfEmergencyContact");
+
+const announcementAdminPanel = $("announcementAdminPanel");
+const announcementForm = $("announcementForm");
+const announcementTitle = $("announcementTitle");
+const announcementMessage = $("announcementMessage");
+const announcementAudience = $("announcementAudience");
+
+const changePasswordForm = $("changePasswordForm");
+const currentPasswordInput = $("currentPasswordInput");
+const newPasswordInput = $("newPasswordInput");
+const confirmNewPasswordInput = $("confirmNewPasswordInput");
+
 const imageModal = $("imageModal");
 const modalImage = $("modalImage");
 const modalImageName = $("modalImageName");
@@ -265,11 +295,6 @@ function normalizeState(parsed) {
     createdAt: user.createdAt || new Date().toISOString()
   }));
 
-  merged.users = merged.users.map((user) => ({
-    ...user,
-    employeeId: user.employeeId ?? null
-  }));
-
   if (!merged.users.some((user) => user.username === "admin" && user.role === "admin")) {
     merged.users.unshift(structuredClone(defaultState.users[0]));
   }
@@ -293,6 +318,7 @@ function normalizeState(parsed) {
   merged.leaveRecords = merged.leaveRecords || [];
   merged.payrollReceipts = merged.payrollReceipts || [];
   merged.notifications = merged.notifications || [];
+  merged.announcements = merged.announcements || [];
 
   return merged;
 }
@@ -302,9 +328,7 @@ async function loadState() {
     try {
       const remoteState = await window.db.loadAppState();
       currentStorageMode = "supabase";
-      if (remoteState) {
-        return normalizeState(remoteState);
-      }
+      if (remoteState) return normalizeState(remoteState);
       await window.db.saveAppState(structuredClone(defaultState));
       return normalizeState(defaultState);
     } catch (error) {
@@ -316,6 +340,7 @@ async function loadState() {
   currentStorageMode = "local";
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return normalizeState(defaultState);
+
   try {
     return normalizeState(JSON.parse(raw));
   } catch {
@@ -333,6 +358,7 @@ async function saveState() {
       alert("Could not save to Supabase. Your latest change may not be online yet.");
     }
   }
+
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
@@ -528,8 +554,10 @@ function refreshCurrentUserFromState() {
     currentUser = null;
     return;
   }
+
   const fresh = state.users.find((u) => u.username === stored.username && u.role === stored.role) || null;
   currentUser = fresh;
+
   if (fresh) localStorage.setItem("emsCurrentUser", JSON.stringify(fresh));
   else localStorage.removeItem("emsCurrentUser");
 }
@@ -541,10 +569,11 @@ function checkLoginState() {
     loginScreen.classList.remove("show");
     appContainer.style.display = "grid";
     applyRolePermissions();
-    if (isEmployee()) {
-  showSection("employeesSection");
-}
     renderAll();
+
+    if (isEmployee()) {
+      showSection("employeesSection");
+    }
   } else {
     loginScreen.classList.add("show");
     appContainer.style.display = "none";
@@ -581,6 +610,7 @@ function logout() {
 function hideNav(sectionId) {
   const item = document.querySelector(`.nav-item[data-section="${sectionId}"]`);
   if (item) item.style.display = "none";
+
   const option = mobileSectionSelect?.querySelector(`option[value="${sectionId}"]`);
   if (option) option.style.display = "none";
 }
@@ -588,6 +618,7 @@ function hideNav(sectionId) {
 function showNav(sectionId) {
   const item = document.querySelector(`.nav-item[data-section="${sectionId}"]`);
   if (item) item.style.display = "flex";
+
   const option = mobileSectionSelect?.querySelector(`option[value="${sectionId}"]`);
   if (option) option.style.display = "";
 }
@@ -602,6 +633,8 @@ function configureNavForCurrentRole() {
     performanceSection: "Performance",
     reportsSection: "Reports",
     notificationsSection: "Notifications",
+    announcementsSection: "Announcements",
+    changePasswordSection: "Change Password",
     settingsSection: "Settings"
   };
 
@@ -643,6 +676,7 @@ function applyRolePermissions() {
     exportExcelBtn.style.display = "block";
     exportPdfBtn.style.display = "block";
     globalSearchInput.parentElement.style.display = "block";
+    if (announcementAdminPanel) announcementAdminPanel.style.display = "none";
   } else if (isEmployee()) {
     hideNav("dashboardSection");
     hideNav("performanceSection");
@@ -653,27 +687,20 @@ function applyRolePermissions() {
     restoreInput.parentElement.style.display = "none";
     exportExcelBtn.style.display = "none";
     exportPdfBtn.style.display = "none";
-
     globalSearchInput.parentElement.style.display = "none";
+    if (announcementAdminPanel) announcementAdminPanel.style.display = "none";
   } else {
-    showNav("settingsSection");
+    showNav("dashboardSection");
     showNav("performanceSection");
     showNav("reportsSection");
+    showNav("settingsSection");
 
     backupBtn.style.display = "block";
     restoreInput.parentElement.style.display = "block";
     exportExcelBtn.style.display = "block";
     exportPdfBtn.style.display = "block";
-
     globalSearchInput.parentElement.style.display = "block";
-  }
-
-  const activeSection = document.querySelector(".page-section.active-section")?.id;
-  if (
-    (isHR() && activeSection === "settingsSection") ||
-    (isEmployee() && ["performanceSection", "reportsSection", "settingsSection"].includes(activeSection))
-  ) {
-    showSection("dashboardSection");
+    if (announcementAdminPanel) announcementAdminPanel.style.display = "block";
   }
 }
 
@@ -690,6 +717,7 @@ function updateBranding() {
 function fillDepartmentSelects() {
   const currentDepartmentValue = department.value;
   const currentDepartmentFilterValue = departmentFilter.value;
+
   let departmentHtml = `<option value="">Select department</option>`;
   let departmentFilterHtml = `<option value="All">All Departments</option>`;
 
@@ -702,6 +730,7 @@ function fillDepartmentSelects() {
   departmentFilter.innerHTML = departmentFilterHtml;
 
   if (state.departments.includes(currentDepartmentValue)) department.value = currentDepartmentValue;
+
   if (currentDepartmentFilterValue === "All" || state.departments.includes(currentDepartmentFilterValue)) {
     departmentFilter.value = currentDepartmentFilterValue || "All";
   } else {
@@ -710,12 +739,15 @@ function fillDepartmentSelects() {
 }
 
 function fillEmployeeSelect(selectElement, placeholder = "Select Employee") {
+  if (!selectElement) return;
   const currentValue = selectElement.value;
   selectElement.innerHTML = `<option value="">${placeholder}</option>`;
   state.employees.forEach((emp) => {
     selectElement.innerHTML += `<option value="${emp.id}">${emp.name} (${emp.id})</option>`;
   });
-  if (state.employees.some((emp) => emp.id === currentValue)) selectElement.value = currentValue;
+  if (state.employees.some((emp) => emp.id === currentValue)) {
+    selectElement.value = currentValue;
+  }
 }
 
 function populateEmployeeDropdowns() {
@@ -723,10 +755,7 @@ function populateEmployeeDropdowns() {
   fillEmployeeSelect(leaveEmployee);
   fillEmployeeSelect(payrollEmployee);
   fillEmployeeSelect(performanceEmployee);
-
-  if (accountEmployeeId) {
-    fillEmployeeSelect(accountEmployeeId, "Select Employee");
-  }
+  fillEmployeeSelect(accountEmployeeId, "Select Employee");
 }
 
 function getCombinedSearch() {
@@ -762,7 +791,6 @@ function updateSummary() {
     $("payrollReceiptCount").textContent = state.payrollReceipts.filter(
       (r) => r.employeeId === emp.id
     ).length;
-
     dashboardDateText.textContent = `Date: ${formatNiceDate(today)}`;
     return;
   }
@@ -817,10 +845,13 @@ function updateReports() {
     $("mainDepartment").textContent = "N/A";
     return;
   }
+
   const salaries = state.employees.map((emp) => Number(emp.salary));
   $("highestSalary").textContent = formatCurrency(Math.max(...salaries));
   $("lowestSalary").textContent = formatCurrency(Math.min(...salaries));
-  $("averageSalary").textContent = formatCurrency(Math.round(salaries.reduce((a, b) => a + b, 0) / salaries.length));
+  $("averageSalary").textContent = formatCurrency(
+    Math.round(salaries.reduce((a, b) => a + b, 0) / salaries.length)
+  );
 
   const deptCounts = {};
   state.employees.forEach((emp) => {
@@ -842,7 +873,6 @@ function updatePerformanceSummary() {
 
 function renderDashboardNotifications() {
   dashboardNotifications.innerHTML = "";
-
   let rows = state.notifications;
 
   if (isEmployee()) {
@@ -854,10 +884,7 @@ function renderDashboardNotifications() {
 
     rows = state.notifications.filter((item) => {
       const text = `${item.title} ${item.message}`.toLowerCase();
-      return (
-        text.includes(emp.name.toLowerCase()) ||
-        text.includes(emp.id.toLowerCase())
-      );
+      return text.includes(emp.name.toLowerCase()) || text.includes(emp.id.toLowerCase());
     });
   }
 
@@ -885,35 +912,15 @@ function renderDashboardTable() {
   employeeTableBody.innerHTML = "";
 
   if (isEmployee()) {
-    const emp = getCurrentEmployee();
-    if (!emp) {
-      emptyState.style.display = "block";
-      return;
-    }
-
-    emptyState.style.display = "none";
-    const index = state.employees.findIndex((item) => item.id === emp.id);
-    const status = getTodayStatus(emp.id);
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${getEmployeePhotoHTML(emp)}</td>
-      <td>${emp.id}</td>
-      <td>${emp.name}</td>
-      <td>${emp.department}</td>
-      <td>${emp.position}</td>
-      <td>${formatCurrency(emp.salary)}</td>
-      <td>${getStatusBadge(status)}</td>
-      <td>
-        <button class="view-pic-btn" onclick="openImageModal(${index})">View Picture</button>
-      </td>
-    `;
-    employeeTableBody.appendChild(row);
+    emptyState.style.display = "block";
+    emptyState.textContent = "Dashboard is hidden for employee accounts.";
     return;
   }
 
   const search = `${getCombinedSearch()} ${employeeSearchInput.value}`.trim();
   const filtered = getFilteredEmployees(search, statusFilter.value, departmentFilter.value);
   emptyState.style.display = filtered.length ? "none" : "block";
+  emptyState.textContent = "No employee records yet.";
 
   filtered.forEach((emp) => {
     const index = state.employees.findIndex((item) => item.id === emp.id);
@@ -937,39 +944,58 @@ function renderDashboardTable() {
   });
 }
 
+function renderEmployeeSelfSection() {
+  const emp = getCurrentEmployee();
+  if (!emp) return;
+
+  if (employeeAdminView) employeeAdminView.style.display = "none";
+  if (employeeSelfProfileView) employeeSelfProfileView.style.display = "grid";
+
+  selfEmployeeId.value = emp.id;
+  selfEmployeeName.value = emp.name;
+  selfEmployeeDepartment.value = emp.department;
+  selfEmployeePosition.value = emp.position;
+  selfPhone.value = emp.phone || "";
+  selfEmail.value = emp.email || "";
+  selfAddress.value = emp.address || "";
+  selfEmergencyContact.value = emp.emergencyContact || "";
+
+  employeeSelfProfileCard.innerHTML = `
+    <div class="history-header">
+      <div style="display:flex; gap:18px; align-items:center; flex-wrap:wrap;">
+        ${getEmployeePhotoHTML(emp)}
+        <div>
+          <h2>${emp.name}</h2>
+          <p>${emp.position} • ${emp.department}</p>
+          <p style="color: var(--soft); margin-top: 6px;">Employee ID: ${emp.id}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="history-stats">
+      <div class="history-stat-box"><span>Phone</span><strong style="font-size:16px;">${emp.phone || "-"}</strong></div>
+      <div class="history-stat-box"><span>Email</span><strong style="font-size:16px;">${emp.email || "-"}</strong></div>
+      <div class="history-stat-box"><span>Annual Leave</span><strong style="font-size:16px;">${emp.leaveBalances.annual}</strong></div>
+      <div class="history-stat-box"><span>Sick Leave</span><strong style="font-size:16px;">${emp.leaveBalances.sick}</strong></div>
+    </div>
+  `;
+}
+
 function renderEmployeesSection() {
-  employeesOnlyTableBody.innerHTML = "";
-
   if (isEmployee()) {
-    const emp = getCurrentEmployee();
-    if (!emp) return;
-
-    const index = state.employees.findIndex((item) => item.id === emp.id);
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${getEmployeePhotoHTML(emp)}</td>
-      <td>${emp.id}</td>
-      <td>${emp.name}</td>
-      <td>${emp.department}</td>
-      <td>${emp.position}</td>
-      <td>${formatCurrency(emp.salary)}</td>
-      <td>A:${emp.leaveBalances.annual} / S:${emp.leaveBalances.sick}</td>
-      <td>
-        <button class="view-pic-btn" onclick="openImageModal(${index})">View Picture</button>
-        <button class="profile-btn" onclick="openProfileModal(${index})">Profile</button>
-        <button class="history-btn" onclick="openHistoryModal(${index})">History</button>
-        <button class="calendar-btn" onclick="openCalendarModal(${index})">Calendar</button>
-      </td>
-    `;
-    employeesOnlyTableBody.appendChild(row);
+    renderEmployeeSelfSection();
     return;
   }
+
+  if (employeeAdminView) employeeAdminView.style.display = "block";
+  if (employeeSelfProfileView) employeeSelfProfileView.style.display = "none";
 
   const search = `${getCombinedSearch()} ${employeesPageSearchInput.value}`.toLowerCase().trim();
   const filtered = state.employees.filter((emp) =>
     `${emp.name} ${emp.id} ${emp.department} ${emp.position}`.toLowerCase().includes(search)
   );
 
+  employeesOnlyTableBody.innerHTML = "";
   filtered.forEach((emp) => {
     const index = state.employees.findIndex((item) => item.id === emp.id);
     const row = document.createElement("tr");
@@ -1039,7 +1065,6 @@ function renderAttendanceSection() {
 function renderLeaveSection() {
   const search = leaveSearchInput.value.toLowerCase().trim();
   leaveTableBody.innerHTML = "";
-
   let rows = state.leaveRecords;
 
   if (isEmployee()) {
@@ -1062,9 +1087,11 @@ function renderLeaveSection() {
     .forEach((record) => {
       const index = state.leaveRecords.findIndex((item) => item.leaveId === record.leaveId);
       const statusClass =
-        record.status === "Approved" ? "present" :
-        record.status === "Rejected" ? "rejected-status" :
-        "pending-status";
+        record.status === "Approved"
+          ? "present"
+          : record.status === "Rejected"
+          ? "rejected-status"
+          : "pending-status";
 
       const actions = isEmployee()
         ? `<span class="muted-text">View Only</span>`
@@ -1092,7 +1119,6 @@ function renderLeaveSection() {
 
 function renderPayrollReceiptsTable() {
   const search = payrollSearchInput.value.toLowerCase().trim();
-
   let rows = state.payrollReceipts;
 
   if (isEmployee()) {
@@ -1102,7 +1128,6 @@ function renderPayrollReceiptsTable() {
     payrollEmployee.disabled = true;
     allowances.disabled = true;
     deductions.disabled = true;
-    payrollMonth.disabled = false;
     payrollForm.querySelector("button[type='submit']").style.display = "none";
   } else {
     payrollEmployee.disabled = false;
@@ -1122,7 +1147,6 @@ function renderPayrollReceiptsTable() {
     .sort((a, b) => new Date(b.createdDate) - new Date(a.createdDate))
     .forEach((receipt) => {
       const index = state.payrollReceipts.findIndex((item) => item.receiptId === receipt.receiptId);
-
       const actions = isEmployee()
         ? `<button class="profile-btn" onclick="viewPayrollReceipt(${index})">View</button>`
         : `
@@ -1148,11 +1172,11 @@ function renderPayrollReceiptsTable() {
 
 function renderPerformanceTable() {
   const search = (performanceSearchInput.value || "").toLowerCase().trim();
-
   const rows = state.employees.filter((emp) => {
     const perf = emp.performance || {};
     return `${emp.id} ${emp.name} ${emp.department} ${perf.managerComment || ""}`.toLowerCase().includes(search);
   });
+
   performanceTableBody.innerHTML = "";
   performanceEmptyState.style.display = rows.length ? "none" : "block";
 
@@ -1185,12 +1209,10 @@ function renderNotifications() {
 
     rows = state.notifications.filter((item) => {
       const text = `${item.title} ${item.message}`.toLowerCase();
-      const matchesEmployee =
-        text.includes(emp.name.toLowerCase()) ||
-        text.includes(emp.id.toLowerCase());
-
-      const matchesSearch = text.includes(search);
-      return matchesEmployee && matchesSearch;
+      return (
+        (text.includes(emp.name.toLowerCase()) || text.includes(emp.id.toLowerCase())) &&
+        text.includes(search)
+      );
     });
   } else {
     rows = state.notifications.filter((item) =>
@@ -1199,7 +1221,6 @@ function renderNotifications() {
   }
 
   notificationsList.innerHTML = rows.length ? "" : `<div class="empty-state">No notifications found.</div>`;
-
   rows.forEach((item) => {
     const div = document.createElement("div");
     div.className = "notification-item";
@@ -1210,6 +1231,43 @@ function renderNotifications() {
     `;
     notificationsList.appendChild(div);
   });
+}
+
+function renderAnnouncements() {
+  const search = (announcementSearchInput?.value || "").toLowerCase().trim();
+  let rows = [...state.announcements];
+
+  if (isEmployee()) {
+    rows = rows.filter((item) => item.audience === "all" || item.audience === "employee");
+  } else if (isHR()) {
+    rows = rows.filter((item) => item.audience === "all" || item.audience === "admin_hr");
+  }
+
+  rows = rows.filter((item) =>
+    `${item.title} ${item.message} ${item.audience}`.toLowerCase().includes(search)
+  );
+
+  announcementsList.innerHTML = "";
+  announcementsEmptyState.style.display = rows.length ? "none" : "block";
+
+  rows
+    .slice()
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .forEach((item) => {
+      const index = state.announcements.findIndex((ann) => ann.id === item.id);
+      const canDelete = isAdmin();
+
+      const div = document.createElement("div");
+      div.className = "notification-item";
+      div.innerHTML = `
+        <h4>${item.title}</h4>
+        <p>${item.message}</p>
+        <p style="margin-top:8px;">Audience: ${item.audience.replace("_", " / ").toUpperCase()}</p>
+        <p>${formatNiceDate(item.createdAt)}</p>
+        ${canDelete ? `<div style="margin-top:10px;"><button class="delete-btn action-btn" onclick="deleteAnnouncement(${index})">Delete</button></div>` : ""}
+      `;
+      announcementsList.appendChild(div);
+    });
 }
 
 function renderDepartmentsTable() {
@@ -1239,6 +1297,7 @@ function renderUsersTable() {
     const adminCount = state.users.filter((u) => u.role === "admin").length;
     const cannotDeleteDefaultAdmin = user.username === "admin";
     const cannotDeleteLastAdmin = user.role === "admin" && adminCount === 1;
+
     const row = document.createElement("tr");
     row.innerHTML = `
       <td>${user.fullName}${user.employeeId ? `<br><small class="muted-text">${user.employeeId}</small>` : ""}</td>
@@ -1246,7 +1305,11 @@ function renderUsersTable() {
       <td><span class="status ${user.role === "admin" ? "pending-status" : user.role === "employee" ? "leave-status" : "present"}">${user.role.toUpperCase()}</span></td>
       <td>${formatNiceDate(user.createdAt)}</td>
       <td>
-        ${cannotDeleteDefaultAdmin || cannotDeleteLastAdmin ? `<span class="muted-text">Protected</span>` : `<button class="delete-btn action-btn" onclick="deleteUserAccount('${user.id}')">Delete</button>`}
+        ${
+          cannotDeleteDefaultAdmin || cannotDeleteLastAdmin
+            ? `<span class="muted-text">Protected</span>`
+            : `<button class="delete-btn action-btn" onclick="deleteUserAccount('${user.id}')">Delete</button>`
+        }
       </td>
     `;
     usersTableBody.appendChild(row);
@@ -1256,53 +1319,79 @@ function renderUsersTable() {
 function renderDepartmentChart() {
   const canvas = $("departmentChart");
   if (!canvas) return;
+
   const counts = {};
   state.employees.forEach((emp) => {
     counts[emp.department] = (counts[emp.department] || 0) + 1;
   });
+
   if (departmentChartInstance) departmentChartInstance.destroy();
   departmentChartInstance = new Chart(canvas, {
     type: "bar",
-    data: { labels: Object.keys(counts), datasets: [{ label: "Employees", data: Object.values(counts), borderWidth: 1 }] },
-    options: { responsive: true, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+    data: {
+      labels: Object.keys(counts),
+      datasets: [{ label: "Employees", data: Object.values(counts), borderWidth: 1 }]
+    },
+    options: {
+      responsive: true,
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+    }
   });
 }
 
 function renderAbsenceChart() {
   const canvas = $("absenceChart");
   if (!canvas) return;
+
   const month = monthFilter.value || getCurrentMonthValue();
   const labels = state.employees.map((emp) => emp.name);
   const values = state.employees.map((emp) => getAbsentDaysForMonth(emp.id, month));
+
   if (absenceChartInstance) absenceChartInstance.destroy();
   absenceChartInstance = new Chart(canvas, {
     type: "line",
-    data: { labels, datasets: [{ label: `Absent Days (${month})`, data: values, fill: false, tension: 0.3, borderWidth: 3 }] },
-    options: { responsive: true, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+    data: {
+      labels,
+      datasets: [{ label: `Absent Days (${month})`, data: values, fill: false, tension: 0.3, borderWidth: 3 }]
+    },
+    options: {
+      responsive: true,
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+    }
   });
 }
 
 function renderLateChart() {
   const canvas = $("lateChart");
   if (!canvas) return;
+
   const month = monthFilter.value || getCurrentMonthValue();
   const labels = state.employees.map((emp) => emp.name);
   const values = state.employees.map((emp) => getLateDaysForMonth(emp.id, month));
+
   if (lateChartInstance) lateChartInstance.destroy();
   lateChartInstance = new Chart(canvas, {
     type: "bar",
-    data: { labels, datasets: [{ label: `Late Days (${month})`, data: values, borderWidth: 1 }] },
-    options: { responsive: true, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+    data: {
+      labels,
+      datasets: [{ label: `Late Days (${month})`, data: values, borderWidth: 1 }]
+    },
+    options: {
+      responsive: true,
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+    }
   });
 }
 
 function renderLeaveChart() {
   const canvas = $("leaveChart");
   if (!canvas) return;
+
   const summary = { Pending: 0, Approved: 0, Rejected: 0 };
   state.leaveRecords.forEach((r) => {
     summary[r.status] = (summary[r.status] || 0) + 1;
   });
+
   if (leaveChartInstance) leaveChartInstance.destroy();
   leaveChartInstance = new Chart(canvas, {
     type: "doughnut",
@@ -1314,15 +1403,23 @@ function renderLeaveChart() {
 function renderSalaryChart() {
   const canvas = $("salaryChart");
   if (!canvas) return;
+
   const totals = {};
   state.employees.forEach((emp) => {
     totals[emp.department] = (totals[emp.department] || 0) + Number(emp.salary);
   });
+
   if (salaryChartInstance) salaryChartInstance.destroy();
   salaryChartInstance = new Chart(canvas, {
     type: "bar",
-    data: { labels: Object.keys(totals), datasets: [{ label: "Total Salary", data: Object.values(totals), borderWidth: 1 }] },
-    options: { responsive: true, scales: { y: { beginAtZero: true } } }
+    data: {
+      labels: Object.keys(totals),
+      datasets: [{ label: "Total Salary", data: Object.values(totals), borderWidth: 1 }]
+    },
+    options: {
+      responsive: true,
+      scales: { y: { beginAtZero: true } }
+    }
   });
 }
 
@@ -1336,6 +1433,7 @@ function renderReportCharts() {
 
 function renderActiveSectionData() {
   const activeSection = document.querySelector(".page-section.active-section")?.id;
+
   if (activeSection === "dashboardSection") {
     renderDashboardTable();
     updateSummary();
@@ -1363,6 +1461,8 @@ function renderActiveSectionData() {
   } else if (activeSection === "notificationsSection") {
     renderNotifications();
     renderDashboardNotifications();
+  } else if (activeSection === "announcementsSection") {
+    renderAnnouncements();
   } else if (activeSection === "settingsSection") {
     renderDepartmentsTable();
     renderUsersTable();
@@ -1390,10 +1490,16 @@ function setImagePreview(src) {
 function openImageModal(index) {
   const emp = state.employees[index];
   if (!emp) return;
-  modalImage.src = emp.image || (
-    "data:image/svg+xml;charset=UTF-8," +
-    encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="500" height="500"><rect width="100%" height="100%" fill="#cbd5e1"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="120" fill="white">${getInitials(emp.name)}</text></svg>`)
-  );
+
+  modalImage.src =
+    emp.image ||
+    ("data:image/svg+xml;charset=UTF-8," +
+      encodeURIComponent(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="500" height="500"><rect width="100%" height="100%" fill="#cbd5e1"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="120" fill="white">${getInitials(
+          emp.name
+        )}</text></svg>`
+      ));
+
   modalImageName.textContent = emp.name;
   imageModal.classList.add("show");
 }
@@ -1401,6 +1507,7 @@ function openImageModal(index) {
 function openProfileModal(index) {
   const emp = state.employees[index];
   if (!emp) return;
+
   const perf = emp.performance || {};
   profileModalContent.innerHTML = `
     <div class="history-header">
@@ -1425,8 +1532,16 @@ function openProfileModal(index) {
       <div class="history-stat-box"><span>Tasks Completed</span><strong style="font-size:16px;">${Number(perf.tasksCompleted || 0)}</strong></div>
       <div class="history-stat-box"><span>Projects Completed</span><strong style="font-size:16px;">${Number(perf.projectsCompleted || 0)}</strong></div>
     </div>
-    <div class="table-section" style="padding:18px; margin-top: 10px;"><h2 style="margin-bottom:10px;">Manager Comment</h2><p style="color: var(--soft); line-height:1.7;">${perf.managerComment || "No manager comment yet."}</p></div>
-    <div class="table-section" style="padding:18px; margin-top: 10px;"><h2 style="margin-bottom:10px;">Documents</h2><div class="profile-docs">${(emp.documents || []).length ? emp.documents.map((doc) => `<span class="doc-pill">${doc}</span>`).join("") : "No documents added."}</div></div>
+    <div class="table-section" style="padding:18px; margin-top: 10px;">
+      <h2 style="margin-bottom:10px;">Manager Comment</h2>
+      <p style="color: var(--soft); line-height:1.7;">${perf.managerComment || "No manager comment yet."}</p>
+    </div>
+    <div class="table-section" style="padding:18px; margin-top: 10px;">
+      <h2 style="margin-bottom:10px;">Documents</h2>
+      <div class="profile-docs">
+        ${(emp.documents || []).length ? emp.documents.map((doc) => `<span class="doc-pill">${doc}</span>`).join("") : "No documents added."}
+      </div>
+    </div>
   `;
   profileModal.classList.add("show");
 }
@@ -1443,8 +1558,12 @@ function openHistoryModal(index) {
 
 function renderHistoryTable() {
   if (!selectedHistoryEmployeeId) return;
+
   const month = historyMonthFilter.value;
-  let records = state.attendanceRecords.filter((r) => r.employeeId === selectedHistoryEmployeeId).map((r) => ({ date: r.date, status: r.status, department: r.department }));
+  let records = state.attendanceRecords
+    .filter((r) => r.employeeId === selectedHistoryEmployeeId)
+    .map((r) => ({ date: r.date, status: r.status, department: r.department }));
+
   state.leaveRecords
     .filter((r) => r.employeeId === selectedHistoryEmployeeId && r.status === "Approved")
     .forEach((r) => {
@@ -1452,9 +1571,12 @@ function renderHistoryTable() {
         records.push({ date, status: "Leave", department: r.department });
       });
     });
+
   const map = new Map();
   records.forEach((item) => map.set(item.date, item));
-  const finalRecords = Array.from(map.values()).filter((r) => !month || r.date.startsWith(month)).sort((a, b) => new Date(b.date) - new Date(a.date));
+  const finalRecords = Array.from(map.values())
+    .filter((r) => !month || r.date.startsWith(month))
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
 
   historyTableBody.innerHTML = "";
   historyPresentCount.textContent = finalRecords.filter((r) => r.status === "Present").length;
@@ -1468,8 +1590,13 @@ function renderHistoryTable() {
     if (record.status === "Present") statusClass = "present";
     if (record.status === "Late") statusClass = "late-status";
     if (record.status === "Absent") statusClass = "absent";
+
     const row = document.createElement("tr");
-    row.innerHTML = `<td>${formatNiceDate(record.date)}</td><td><span class="status ${statusClass}">${record.status}</span></td><td>${record.department}</td>`;
+    row.innerHTML = `
+      <td>${formatNiceDate(record.date)}</td>
+      <td><span class="status ${statusClass}">${record.status}</span></td>
+      <td>${record.department}</td>
+    `;
     historyTableBody.appendChild(row);
   });
 }
@@ -1486,19 +1613,36 @@ function openCalendarModal(index) {
 
 function renderAttendanceCalendar() {
   if (!selectedCalendarEmployeeId) return;
+
   const monthValue = calendarMonthFilter.value || getCurrentMonthValue();
   const [year, month] = monthValue.split("-").map(Number);
   const daysInMonth = new Date(year, month, 0).getDate();
   attendanceCalendarGrid.innerHTML = "";
+
   for (let day = 1; day <= daysInMonth; day++) {
     const date = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     const status = getStatusForDate(selectedCalendarEmployeeId, date);
+
     let dayClass = "";
     let badgeClass = "";
-    if (status === "Present") { dayClass = "present-day"; badgeClass = "present"; }
-    if (status === "Late") { dayClass = "late-day"; badgeClass = "late-status"; }
-    if (status === "Absent") { dayClass = "absent-day"; badgeClass = "absent"; }
-    if (status === "Leave") { dayClass = "leave-day"; badgeClass = "leave-status"; }
+
+    if (status === "Present") {
+      dayClass = "present-day";
+      badgeClass = "present";
+    }
+    if (status === "Late") {
+      dayClass = "late-day";
+      badgeClass = "late-status";
+    }
+    if (status === "Absent") {
+      dayClass = "absent-day";
+      badgeClass = "absent";
+    }
+    if (status === "Leave") {
+      dayClass = "leave-day";
+      badgeClass = "leave-status";
+    }
+
     const cell = document.createElement("div");
     cell.className = `calendar-day ${dayClass}`;
     cell.innerHTML = `<div class="day-number">${day}</div><span class="day-status ${badgeClass}">${status}</span>`;
@@ -1513,10 +1657,17 @@ function closeModal(el) {
 async function approveLeave(index) {
   const record = state.leaveRecords[index];
   if (!record || record.status === "Approved") return;
+
   const emp = getEmployeeById(record.employeeId);
   if (!emp) return;
-  if (record.leaveType === "Annual Leave" && emp.leaveBalances.annual < record.days) return alert("Not enough annual leave balance.");
-  if (record.leaveType === "Sick Leave" && emp.leaveBalances.sick < record.days) return alert("Not enough sick leave balance.");
+
+  if (record.leaveType === "Annual Leave" && emp.leaveBalances.annual < record.days) {
+    return alert("Not enough annual leave balance.");
+  }
+  if (record.leaveType === "Sick Leave" && emp.leaveBalances.sick < record.days) {
+    return alert("Not enough sick leave balance.");
+  }
+
   if (record.leaveType === "Annual Leave") {
     emp.leaveBalances.annual -= record.days;
     record.balanceAfter = emp.leaveBalances.annual;
@@ -1526,6 +1677,7 @@ async function approveLeave(index) {
   } else {
     record.balanceAfter = "-";
   }
+
   record.status = "Approved";
   addNotification("Leave Approved", `${record.employeeName}'s ${record.leaveType} was approved.`);
   await saveState();
@@ -1554,6 +1706,7 @@ async function deleteLeave(index) {
 function viewPayrollReceipt(index) {
   const receipt = state.payrollReceipts[index];
   if (!receipt) return;
+
   payslipCard.innerHTML = `
     <h3>Salary Slip</h3>
     <div class="payslip-row"><span>Employee</span><strong>${receipt.employeeName}</strong></div>
@@ -1612,18 +1765,37 @@ function exportToExcel() {
 function exportToPDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
+
   doc.setFontSize(16);
   doc.text("Employee Management Report", 14, 16);
   doc.setFontSize(11);
   doc.text(`Date: ${getCurrentDateValue()}`, 14, 24);
-  const rows = getExportRows().map((item) => [item["Employee ID"], item["Name"], item["Department"], item["Position"], String(item["Salary"]), item["Today Status"], String(item["Late Days This Month"]), String(item["Absent Days This Month"]), String(item["Performance Rating"])]);
-  doc.autoTable({ startY: 30, head: [["ID", "Name", "Department", "Position", "Salary", "Status", "Late", "Absent", "Rating"]], body: rows });
+
+  const rows = getExportRows().map((item) => [
+    item["Employee ID"],
+    item["Name"],
+    item["Department"],
+    item["Position"],
+    String(item["Salary"]),
+    item["Today Status"],
+    String(item["Late Days This Month"]),
+    String(item["Absent Days This Month"]),
+    String(item["Performance Rating"])
+  ]);
+
+  doc.autoTable({
+    startY: 30,
+    head: [["ID", "Name", "Department", "Position", "Salary", "Status", "Late", "Absent", "Rating"]],
+    body: rows
+  });
+
   doc.save("employee_management_report.pdf");
   closeActionMenu();
 }
 
 function backupData() {
   if (!isAdmin()) return alert("Only admin can back up data.");
+
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
@@ -1635,6 +1807,7 @@ function backupData() {
 
 function restoreData(file) {
   if (!isAdmin()) return alert("Only admin can restore data.");
+
   const reader = new FileReader();
   reader.onload = async function (e) {
     try {
@@ -1657,9 +1830,7 @@ async function generatePayslip() {
   const emp = getEmployeeById(employeeIdValue);
   if (!emp) return;
 
-  if (isEmployee()) {
-    return alert("Employees cannot generate payroll.");
-  }
+  if (isEmployee()) return alert("Employees cannot generate payroll.");
 
   const allowanceValue = Number(allowances.value || 0);
   const deductionValue = Number(deductions.value || 0);
@@ -1697,6 +1868,7 @@ async function generatePayslip() {
 
   if (index !== -1) state.payrollReceipts[index] = receipt;
   else state.payrollReceipts.push(receipt);
+
   addNotification("Payroll Generated", `Payslip created for ${emp.name} (${monthValue}).`);
   await saveState();
   renderAll();
@@ -1704,9 +1876,24 @@ async function generatePayslip() {
 
 function printPayslip() {
   const content = payslipCard.innerHTML;
-  if (!content || payslipCard.textContent.includes("No payslip")) return alert("Generate or view a payslip first.");
+  if (!content || payslipCard.textContent.includes("No payslip")) {
+    return alert("Generate or view a payslip first.");
+  }
+
   const printWindow = window.open("", "_blank");
-  printWindow.document.write(`<html><head><title>Payslip</title><style>body{font-family:Arial,sans-serif;padding:24px}.payslip-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #ddd}.payslip-total{margin-top:16px;font-size:20px;font-weight:bold;color:green}</style></head><body>${content}</body></html>`);
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Payslip</title>
+        <style>
+          body{font-family:Arial,sans-serif;padding:24px}
+          .payslip-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #ddd}
+          .payslip-total{margin-top:16px;font-size:20px;font-weight:bold;color:green}
+        </style>
+      </head>
+      <body>${content}</body>
+    </html>
+  `);
   printWindow.document.close();
   printWindow.print();
 }
@@ -1719,9 +1906,7 @@ function toggleEmployeeLinkField() {
   if (!accountRole || !accountEmployeeGroup) return;
   const show = accountRole.value === "employee";
   accountEmployeeGroup.style.display = show ? "block" : "none";
-  if (!show && accountEmployeeId) {
-    accountEmployeeId.value = "";
-  }
+  if (!show && accountEmployeeId) accountEmployeeId.value = "";
 }
 
 async function createUserAccount() {
@@ -1772,13 +1957,19 @@ async function createUserAccount() {
 
 async function deleteUserAccount(userId) {
   if (!isAdmin()) return alert("Only admin can delete accounts.");
+
   const user = state.users.find((u) => u.id === userId);
   if (!user) return;
   if (user.username === "admin") return alert("Default admin account cannot be deleted.");
+
   const adminCount = state.users.filter((u) => u.role === "admin").length;
   if (user.role === "admin" && adminCount <= 1) return alert("You must keep at least one admin account.");
-  if (currentUser?.id === userId || currentUser?.username === user.username) return alert("You cannot delete the account you are currently using.");
+  if (currentUser?.id === userId || currentUser?.username === user.username) {
+    return alert("You cannot delete the account you are currently using.");
+  }
+
   if (!confirm(`Delete account for ${user.fullName}?`)) return;
+
   state.users = state.users.filter((u) => u.id !== userId);
   addNotification("Account Deleted", `${user.fullName}'s account was deleted.`);
   await saveState();
@@ -1792,11 +1983,15 @@ async function resetPasswordFromLogin() {
   const newPassword = forgotNewPassword.value.trim();
   const confirmPassword = forgotConfirmPassword.value.trim();
 
-  if (!fullName || !username || !newPassword || !confirmPassword) return alert("Please fill all reset password fields.");
+  if (!fullName || !username || !newPassword || !confirmPassword) {
+    return alert("Please fill all reset password fields.");
+  }
   if (newPassword.length < 4) return alert("Password should be at least 4 characters.");
   if (newPassword !== confirmPassword) return alert("Passwords do not match.");
 
-  const user = state.users.find((u) => u.username.toLowerCase() === username && u.fullName.toLowerCase() === fullName);
+  const user = state.users.find(
+    (u) => u.username.toLowerCase() === username && u.fullName.toLowerCase() === fullName
+  );
   if (!user) return alert("Matching account not found.");
 
   user.password = newPassword;
@@ -1813,6 +2008,73 @@ async function resetPasswordFromLogin() {
   alert("Password reset successful. You can now log in.");
 }
 
+async function changeOwnPassword() {
+  if (!currentUser) return;
+
+  const currentPassword = currentPasswordInput.value.trim();
+  const newPassword = newPasswordInput.value.trim();
+  const confirmPassword = confirmNewPasswordInput.value.trim();
+
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    return alert("Please fill all password fields.");
+  }
+
+  if (currentPassword !== currentUser.password) {
+    return alert("Current password is incorrect.");
+  }
+
+  if (newPassword.length < 4) {
+    return alert("New password should be at least 4 characters.");
+  }
+
+  if (newPassword !== confirmPassword) {
+    return alert("New passwords do not match.");
+  }
+
+  currentUser.password = newPassword;
+  const userIndex = state.users.findIndex((u) => u.id === currentUser.id);
+  if (userIndex !== -1) state.users[userIndex].password = newPassword;
+
+  await saveState();
+  localStorage.setItem("emsCurrentUser", JSON.stringify(currentUser));
+  changePasswordForm.reset();
+  alert("Password changed successfully.");
+}
+
+async function createAnnouncement() {
+  if (!isAdmin()) return alert("Only admin can create announcements.");
+
+  const title = announcementTitle.value.trim();
+  const message = announcementMessage.value.trim();
+  const audience = announcementAudience.value;
+
+  if (!title || !message) return alert("Please fill announcement title and message.");
+
+  state.announcements.unshift({
+    id: "AN" + Date.now(),
+    title,
+    message,
+    audience,
+    createdAt: new Date().toISOString(),
+    createdBy: currentUser?.fullName || "Admin"
+  });
+
+  addNotification("Announcement Created", `${title} was published.`);
+  await saveState();
+  announcementForm.reset();
+  renderAnnouncements();
+}
+
+async function deleteAnnouncement(index) {
+  if (!isAdmin()) return alert("Only admin can delete announcements.");
+  const announcement = state.announcements[index];
+  if (!announcement) return;
+  if (!confirm("Delete this announcement?")) return;
+  state.announcements.splice(index, 1);
+  await saveState();
+  renderAnnouncements();
+}
+
 function renderAll() {
   updateBranding();
   fillDepartmentSelects();
@@ -1824,6 +2086,7 @@ function renderAll() {
   renderPayrollReceiptsTable();
   renderPerformanceTable();
   renderNotifications();
+  renderAnnouncements();
   renderDepartmentsTable();
   renderUsersTable();
   renderDashboardNotifications();
@@ -1831,6 +2094,7 @@ function renderAll() {
   updateAnalyticsCards();
   updateReports();
   updatePerformanceSummary();
+
   const activeSection = document.querySelector(".page-section.active-section")?.id;
   if (activeSection === "reportsSection") renderReportCharts();
 }
@@ -1845,28 +2109,30 @@ function resetEmployeeForm() {
 }
 
 function showSection(sectionId) {
-  if (sectionId === "settingsSection" && isHR()) {
-    showSection("dashboardSection");
-    return;
+  if (sectionId === "settingsSection" && (isHR() || isEmployee())) {
+    sectionId = isEmployee() ? "employeesSection" : "dashboardSection";
   }
-  if (sectionId === "settingsSection" && isEmployee()) {
-    showSection("dashboardSection");
-    return;
-  }
+
   if (sectionId === "reportsSection" && isEmployee()) {
-    showSection("dashboardSection");
-    return;
+    sectionId = "employeesSection";
   }
+
   if (sectionId === "performanceSection" && isEmployee()) {
-    showSection("dashboardSection");
-    return;
+    sectionId = "employeesSection";
+  }
+
+  if (sectionId === "dashboardSection" && isEmployee()) {
+    sectionId = "employeesSection";
   }
 
   document.querySelectorAll(".page-section").forEach((section) => section.classList.remove("active-section"));
   document.querySelectorAll(".nav-item").forEach((item) => item.classList.toggle("active", item.dataset.section === sectionId));
+
   $(sectionId).classList.add("active-section");
   pageTitle.textContent = SECTION_TITLES[sectionId] || "Employee Management Dashboard";
+
   if (mobileSectionSelect) mobileSectionSelect.value = sectionId;
+
   closeActionMenu();
   renderActiveSectionData();
 }
@@ -1885,7 +2151,9 @@ async function addDepartment() {
 
 async function deleteDepartment(dep) {
   if (!isAdmin()) return alert("Only admin can delete departments.");
-  if (state.employees.some((emp) => emp.department === dep)) return alert("Cannot delete a department that still has employees.");
+  if (state.employees.some((emp) => emp.department === dep)) {
+    return alert("Cannot delete a department that still has employees.");
+  }
   state.departments = state.departments.filter((d) => d !== dep);
   addNotification("Department Deleted", `${dep} department was deleted.`);
   await saveState();
@@ -1900,9 +2168,15 @@ async function createLeaveRequest(employeeIdValue, leaveTypeValue, startDateValu
     return alert("You can only request leave for your own account.");
   }
 
-  if (!leaveTypeValue || !startDateValue || !endDateValue) return alert("Please fill in all leave fields.");
-  if (endDateValue < startDateValue) return alert("End date cannot be before start date.");
+  if (!leaveTypeValue || !startDateValue || !endDateValue) {
+    return alert("Please fill in all leave fields.");
+  }
+  if (endDateValue < startDateValue) {
+    return alert("End date cannot be before start date.");
+  }
+
   const days = diffDays(startDateValue, endDateValue);
+
   state.leaveRecords.push({
     leaveId: `LV${Date.now().toString().slice(-6)}`,
     employeeId: emp.id,
@@ -1916,6 +2190,7 @@ async function createLeaveRequest(employeeIdValue, leaveTypeValue, startDateValu
     status: "Pending",
     balanceAfter: "-"
   });
+
   addNotification("Leave Requested", `${emp.name} submitted a ${leaveTypeValue} request.`);
   await saveState();
   renderAll();
@@ -1924,6 +2199,7 @@ async function createLeaveRequest(employeeIdValue, leaveTypeValue, startDateValu
 function editEmployee(index) {
   const emp = state.employees[index];
   if (!emp) return;
+
   employeeId.value = emp.id;
   employeeName.value = emp.name;
   department.value = emp.department;
@@ -1949,11 +2225,13 @@ async function deleteEmployee(index) {
   const emp = state.employees[index];
   if (!emp) return;
   if (!confirm(`Delete ${emp.name}?`)) return;
+
   state.employees.splice(index, 1);
   state.attendanceRecords = state.attendanceRecords.filter((r) => r.employeeId !== emp.id);
   state.leaveRecords = state.leaveRecords.filter((r) => r.employeeId !== emp.id);
   state.payrollReceipts = state.payrollReceipts.filter((r) => r.employeeId !== emp.id);
   state.users = state.users.filter((u) => u.employeeId !== emp.id);
+
   addNotification("Employee Deleted", `${emp.name} was removed from the system.`);
   await saveState();
   renderAll();
@@ -1963,13 +2241,26 @@ async function markAttendance() {
   const employeeIdValue = attendanceEmployee.value;
   const selectedDate = attendanceDate.value;
   const selectedStatus = attendanceStatusSelect.value;
+
   if (!employeeIdValue || !selectedDate) return alert("Please select employee and date.");
   const emp = getEmployeeById(employeeIdValue);
   if (!emp) return;
-  const index = state.attendanceRecords.findIndex((r) => r.employeeId === employeeIdValue && r.date === selectedDate);
-  const record = { employeeId: emp.id, name: emp.name, department: emp.department, status: selectedStatus, date: selectedDate };
+
+  const index = state.attendanceRecords.findIndex(
+    (r) => r.employeeId === employeeIdValue && r.date === selectedDate
+  );
+
+  const record = {
+    employeeId: emp.id,
+    name: emp.name,
+    department: emp.department,
+    status: selectedStatus,
+    date: selectedDate
+  };
+
   if (index !== -1) state.attendanceRecords[index] = record;
   else state.attendanceRecords.push(record);
+
   addNotification("Attendance Updated", `${emp.name} marked ${selectedStatus} for ${selectedDate}.`);
   await saveState();
   renderAll();
@@ -1978,10 +2269,16 @@ async function markAttendance() {
 async function clearSingleAttendance() {
   const employeeIdValue = attendanceEmployee.value;
   const selectedDate = attendanceDate.value;
+
   if (!employeeIdValue || !selectedDate) return alert("Please select employee and date.");
+
   const before = state.attendanceRecords.length;
-  state.attendanceRecords = state.attendanceRecords.filter((r) => !(r.employeeId === employeeIdValue && r.date === selectedDate));
+  state.attendanceRecords = state.attendanceRecords.filter(
+    (r) => !(r.employeeId === employeeIdValue && r.date === selectedDate)
+  );
+
   if (before === state.attendanceRecords.length) return alert("No record found.");
+
   addNotification("Attendance Cleared", `Attendance record removed for ${selectedDate}.`);
   await saveState();
   renderAll();
@@ -1991,6 +2288,7 @@ async function clearAllAttendanceForDate() {
   const selectedDate = attendanceDate.value;
   if (!selectedDate) return alert("Choose a date.");
   if (!confirm(`Clear all attendance for ${selectedDate}?`)) return;
+
   state.attendanceRecords = state.attendanceRecords.filter((r) => r.date !== selectedDate);
   addNotification("Attendance Cleared", `All attendance records for ${selectedDate} were cleared.`);
   await saveState();
@@ -2000,14 +2298,16 @@ async function clearAllAttendanceForDate() {
 async function savePerformanceRecord() {
   const employeeIdValue = performanceEmployee.value;
   const ratingValue = Number(performanceRating.value);
+
   if (!employeeIdValue) return alert("Please select an employee.");
-  if (!ratingValue || ratingValue < 1 || ratingValue > 5) return alert("Rating must be between 1 and 5.");
+  if (!ratingValue || ratingValue < 1 || ratingValue > 5) {
+    return alert("Rating must be between 1 and 5.");
+  }
+
   const emp = getEmployeeById(employeeIdValue);
   if (!emp) return;
 
-  if (isEmployee()) {
-    return alert("Employees cannot edit performance records.");
-  }
+  if (isEmployee()) return alert("Employees cannot edit performance records.");
 
   emp.performance = {
     rating: ratingValue,
@@ -2015,18 +2315,35 @@ async function savePerformanceRecord() {
     projectsCompleted: Number(projectsCompleted.value || 0),
     managerComment: managerComment.value.trim()
   };
+
   addNotification("Performance Updated", `Performance record saved for ${emp.name}.`);
   await saveState();
   renderAll();
   performanceForm.reset();
 }
 
-employeeImage.addEventListener("change", function (e) {
+async function updateEmployeeSelfProfile() {
+  const emp = getCurrentEmployee();
+  if (!emp) return;
+
+  emp.phone = selfPhone.value.trim();
+  emp.email = selfEmail.value.trim();
+  emp.address = selfAddress.value.trim();
+  emp.emergencyContact = selfEmergencyContact.value.trim();
+
+  addNotification("Profile Updated", `${emp.name} updated their personal profile.`);
+  await saveState();
+  renderEmployeesSection();
+  alert("Your profile was updated.");
+}
+
+employeeImage?.addEventListener("change", function (e) {
   const file = e.target.files[0];
   if (!file) {
     resetImagePreview();
     return;
   }
+
   const reader = new FileReader();
   reader.onload = function (event) {
     selectedImageBase64 = event.target.result;
@@ -2035,8 +2352,9 @@ employeeImage.addEventListener("change", function (e) {
   reader.readAsDataURL(file);
 });
 
-employeeForm.addEventListener("submit", async function (e) {
+employeeForm?.addEventListener("submit", async function (e) {
   e.preventDefault();
+
   const employeeData = {
     id: employeeId.value.trim(),
     name: employeeName.value.trim(),
@@ -2056,9 +2374,26 @@ employeeForm.addEventListener("submit", async function (e) {
       sick: Number(sickLeaveBalance.value || state.settings.defaultSickLeave)
     },
     documents: Array.from(employeeDocuments.files || []).map((file) => file.name),
-    performance: editIndex !== -1 ? (state.employees[editIndex].performance || { rating: 0, tasksCompleted: 0, projectsCompleted: 0, managerComment: "" }) : { rating: 0, tasksCompleted: 0, projectsCompleted: 0, managerComment: "" }
+    performance:
+      editIndex !== -1
+        ? state.employees[editIndex].performance || {
+            rating: 0,
+            tasksCompleted: 0,
+            projectsCompleted: 0,
+            managerComment: ""
+          }
+        : {
+            rating: 0,
+            tasksCompleted: 0,
+            projectsCompleted: 0,
+            managerComment: ""
+          }
   };
-  if (!employeeData.id || !employeeData.name || !employeeData.department || !employeeData.position || !employeeData.salary) return alert("Please fill in all main fields.");
+
+  if (!employeeData.id || !employeeData.name || !employeeData.department || !employeeData.position || !employeeData.salary) {
+    return alert("Please fill in all main fields.");
+  }
+
   const duplicate = state.employees.findIndex((emp, idx) => emp.id === employeeData.id && idx !== editIndex);
   if (duplicate !== -1) return alert("Employee ID already exists.");
 
@@ -2077,9 +2412,20 @@ employeeForm.addEventListener("submit", async function (e) {
   renderAll();
 });
 
-leaveForm.addEventListener("submit", async function (e) {
+employeeSelfProfileForm?.addEventListener("submit", async function (e) {
   e.preventDefault();
-  await createLeaveRequest(leaveEmployee.value, leaveType.value, leaveStartDate.value, leaveEndDate.value, leaveReason.value);
+  await updateEmployeeSelfProfile();
+});
+
+leaveForm?.addEventListener("submit", async function (e) {
+  e.preventDefault();
+  await createLeaveRequest(
+    leaveEmployee.value,
+    leaveType.value,
+    leaveStartDate.value,
+    leaveEndDate.value,
+    leaveReason.value
+  );
   leaveForm.reset();
   if (isEmployee()) {
     const emp = getCurrentEmployee();
@@ -2087,36 +2433,48 @@ leaveForm.addEventListener("submit", async function (e) {
   }
 });
 
-payrollForm.addEventListener("submit", async function (e) {
+payrollForm?.addEventListener("submit", async function (e) {
   e.preventDefault();
   await generatePayslip();
 });
 
-performanceForm.addEventListener("submit", async function (e) {
+performanceForm?.addEventListener("submit", async function (e) {
   e.preventDefault();
   await savePerformanceRecord();
 });
 
-settingsForm.addEventListener("submit", async function (e) {
+settingsForm?.addEventListener("submit", async function (e) {
   e.preventDefault();
   if (!isAdmin()) return alert("Only admin can change system settings.");
+
   state.settings.companyName = companyNameInput.value.trim() || "EmployeeHub Pro";
   state.settings.companyLogoText = companyLogoTextInput.value.trim() || "EMS";
   state.settings.defaultAnnualLeave = Number(defaultAnnualLeaveInput.value || 21);
   state.settings.defaultSickLeave = Number(defaultSickLeaveInput.value || 10);
+
   addNotification("Settings Updated", "System settings were updated.");
   await saveState();
   renderAll();
 });
 
-loginForm.addEventListener("submit", async function (e) {
+loginForm?.addEventListener("submit", async function (e) {
   e.preventDefault();
   await login(loginUsername.value.trim(), loginPassword.value.trim());
 });
 
-forgotPasswordForm.addEventListener("submit", async function (e) {
+forgotPasswordForm?.addEventListener("submit", async function (e) {
   e.preventDefault();
   await resetPasswordFromLogin();
+});
+
+changePasswordForm?.addEventListener("submit", async function (e) {
+  e.preventDefault();
+  await changeOwnPassword();
+});
+
+announcementForm?.addEventListener("submit", async function (e) {
+  e.preventDefault();
+  await createAnnouncement();
 });
 
 document.querySelectorAll(".nav-item").forEach((item) => {
@@ -2129,25 +2487,26 @@ mobileSectionSelect?.addEventListener("change", function () {
   showSection(this.value);
 });
 
-globalSearchInput.addEventListener("input", function () {
+globalSearchInput?.addEventListener("input", function () {
   renderDashboardTable();
   renderEmployeesSection();
 });
-employeeSearchInput.addEventListener("input", renderDashboardTable);
-employeesPageSearchInput.addEventListener("input", renderEmployeesSection);
-attendanceSearchInput.addEventListener("input", renderAttendanceSection);
-leaveSearchInput.addEventListener("input", renderLeaveSection);
-payrollSearchInput.addEventListener("input", renderPayrollReceiptsTable);
-notificationSearchInput.addEventListener("input", function () {
+employeeSearchInput?.addEventListener("input", renderDashboardTable);
+employeesPageSearchInput?.addEventListener("input", renderEmployeesSection);
+attendanceSearchInput?.addEventListener("input", renderAttendanceSection);
+leaveSearchInput?.addEventListener("input", renderLeaveSection);
+payrollSearchInput?.addEventListener("input", renderPayrollReceiptsTable);
+notificationSearchInput?.addEventListener("input", function () {
   renderNotifications();
   renderDashboardNotifications();
 });
-performanceSearchInput.addEventListener("input", renderPerformanceTable);
-userSearchInput.addEventListener("input", renderUsersTable);
-departmentFilter.addEventListener("change", renderDashboardTable);
-statusFilter.addEventListener("change", renderDashboardTable);
+performanceSearchInput?.addEventListener("input", renderPerformanceTable);
+announcementSearchInput?.addEventListener("input", renderAnnouncements);
+userSearchInput?.addEventListener("input", renderUsersTable);
+departmentFilter?.addEventListener("change", renderDashboardTable);
+statusFilter?.addEventListener("change", renderDashboardTable);
 
-monthFilter.addEventListener("change", function () {
+monthFilter?.addEventListener("change", function () {
   renderAttendanceSection();
   updateAnalyticsCards();
   if (document.querySelector(".page-section.active-section")?.id === "reportsSection") {
@@ -2156,42 +2515,65 @@ monthFilter.addEventListener("change", function () {
   }
 });
 
-attendanceDate.addEventListener("change", function () {
+attendanceDate?.addEventListener("change", function () {
   updateSummary();
   renderDashboardTable();
 });
 
-historyMonthFilter.addEventListener("change", renderHistoryTable);
-calendarMonthFilter.addEventListener("change", renderAttendanceCalendar);
-resetBtn.addEventListener("click", resetEmployeeForm);
-markAttendanceBtn.addEventListener("click", markAttendance);
-clearSingleAttendanceBtn.addEventListener("click", clearSingleAttendance);
-clearAllAttendanceForDateBtn.addEventListener("click", clearAllAttendanceForDate);
-printPayslipBtn.addEventListener("click", printPayslip);
-actionMenuBtn.addEventListener("click", function (e) { e.stopPropagation(); toggleActionMenu(); });
-document.addEventListener("click", function (e) {
-  if (!actionDropdown.contains(e.target) && !actionMenuBtn.contains(e.target)) closeActionMenu();
+historyMonthFilter?.addEventListener("change", renderHistoryTable);
+calendarMonthFilter?.addEventListener("change", renderAttendanceCalendar);
+resetBtn?.addEventListener("click", resetEmployeeForm);
+markAttendanceBtn?.addEventListener("click", markAttendance);
+clearSingleAttendanceBtn?.addEventListener("click", clearSingleAttendance);
+clearAllAttendanceForDateBtn?.addEventListener("click", clearAllAttendanceForDate);
+printPayslipBtn?.addEventListener("click", printPayslip);
+
+actionMenuBtn?.addEventListener("click", function (e) {
+  e.stopPropagation();
+  toggleActionMenu();
 });
-darkModeToggle.addEventListener("click", function () { toggleDarkMode(); closeActionMenu(); });
-exportExcelBtn.addEventListener("click", exportToExcel);
-exportPdfBtn.addEventListener("click", exportToPDF);
-backupBtn.addEventListener("click", backupData);
-restoreInput.addEventListener("change", function (e) { if (e.target.files[0]) restoreData(e.target.files[0]); });
-logoutBtn.addEventListener("click", logout);
-addDepartmentBtn.addEventListener("click", addDepartment);
-userAccountForm.addEventListener("submit", async function (e) { e.preventDefault(); await createUserAccount(); });
-accountRole.addEventListener("change", toggleEmployeeLinkField);
-forgotPasswordBtn.addEventListener("click", () => forgotPasswordModal.classList.add("show"));
-closeForgotPasswordModal.addEventListener("click", () => closeModal(forgotPasswordModal));
-closeImageModal.addEventListener("click", () => closeModal(imageModal));
-closeProfileModal.addEventListener("click", () => closeModal(profileModal));
-closeHistoryModal.addEventListener("click", () => closeModal(historyModal));
-closeCalendarModal.addEventListener("click", () => closeModal(calendarModal));
-imageModal.addEventListener("click", (e) => e.target === imageModal && closeModal(imageModal));
-profileModal.addEventListener("click", (e) => e.target === profileModal && closeModal(profileModal));
-historyModal.addEventListener("click", (e) => e.target === historyModal && closeModal(historyModal));
-calendarModal.addEventListener("click", (e) => e.target === calendarModal && closeModal(calendarModal));
-forgotPasswordModal.addEventListener("click", (e) => e.target === forgotPasswordModal && closeModal(forgotPasswordModal));
+
+document.addEventListener("click", function (e) {
+  if (!actionDropdown.contains(e.target) && !actionMenuBtn.contains(e.target)) {
+    closeActionMenu();
+  }
+});
+
+darkModeToggle?.addEventListener("click", function () {
+  toggleDarkMode();
+  closeActionMenu();
+});
+
+exportExcelBtn?.addEventListener("click", exportToExcel);
+exportPdfBtn?.addEventListener("click", exportToPDF);
+backupBtn?.addEventListener("click", backupData);
+
+restoreInput?.addEventListener("change", function (e) {
+  if (e.target.files[0]) restoreData(e.target.files[0]);
+});
+
+logoutBtn?.addEventListener("click", logout);
+addDepartmentBtn?.addEventListener("click", addDepartment);
+
+userAccountForm?.addEventListener("submit", async function (e) {
+  e.preventDefault();
+  await createUserAccount();
+});
+
+accountRole?.addEventListener("change", toggleEmployeeLinkField);
+
+forgotPasswordBtn?.addEventListener("click", () => forgotPasswordModal.classList.add("show"));
+closeForgotPasswordModal?.addEventListener("click", () => closeModal(forgotPasswordModal));
+closeImageModal?.addEventListener("click", () => closeModal(imageModal));
+closeProfileModal?.addEventListener("click", () => closeModal(profileModal));
+closeHistoryModal?.addEventListener("click", () => closeModal(historyModal));
+closeCalendarModal?.addEventListener("click", () => closeModal(calendarModal));
+
+imageModal?.addEventListener("click", (e) => e.target === imageModal && closeModal(imageModal));
+profileModal?.addEventListener("click", (e) => e.target === profileModal && closeModal(profileModal));
+historyModal?.addEventListener("click", (e) => e.target === historyModal && closeModal(historyModal));
+calendarModal?.addEventListener("click", (e) => e.target === calendarModal && closeModal(calendarModal));
+forgotPasswordModal?.addEventListener("click", (e) => e.target === forgotPasswordModal && closeModal(forgotPasswordModal));
 
 if (attendanceDate) attendanceDate.value = getCurrentDateValue();
 if (monthFilter) monthFilter.value = getCurrentMonthValue();
@@ -2225,3 +2607,4 @@ window.viewPayrollReceipt = viewPayrollReceipt;
 window.deletePayrollReceipt = deletePayrollReceipt;
 window.deleteDepartment = deleteDepartment;
 window.deleteUserAccount = deleteUserAccount;
+window.deleteAnnouncement = deleteAnnouncement;

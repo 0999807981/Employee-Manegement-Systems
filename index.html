@@ -37,7 +37,7 @@
         <div class="login-features">
           <div class="login-feature-card">
             <h3>Multi Admin Support</h3>
-            <p>Keep the default admin and let admins create more admin, HR, or employee accounts.</p>
+            <p>Keep the default admin and let admins create more admin, HR or employee accounts.</p>
           </div>
           <div class="login-feature-card">
             <h3>Database Ready</h3>
@@ -54,7 +54,7 @@
         <div class="login-card-top">
           <span class="login-badge">Secure Access</span>
           <h2>Sign In</h2>
-          <p>Use your account to continue</p>
+          <p>Use your admin, HR or employee account to continue</p>
         </div>
 
         <form id="loginForm">
@@ -67,8 +67,6 @@
             <label for="loginPassword">Password</label>
             <input type="password" id="loginPassword" placeholder="Enter password" required />
           </div>
-
-          <div class="login-row"></div>
 
           <button type="submit" class="btn-primary full-btn login-submit-btn">Login</button>
         </form>
@@ -123,6 +121,14 @@
           <span class="nav-icon">🔔</span>
           <span class="nav-label">Notifications</span>
         </li>
+        <li class="nav-item" data-section="announcementsSection">
+          <span class="nav-icon">📢</span>
+          <span class="nav-label">Announcements</span>
+        </li>
+        <li class="nav-item" data-section="changePasswordSection">
+          <span class="nav-icon">🔐</span>
+          <span class="nav-label">Change Password</span>
+        </li>
         <li class="nav-item" data-section="settingsSection">
           <span class="nav-icon">⚙️</span>
           <span class="nav-label">Settings</span>
@@ -170,6 +176,8 @@
           <option value="performanceSection">Performance</option>
           <option value="reportsSection">Reports</option>
           <option value="notificationsSection">Notifications</option>
+          <option value="announcementsSection">Announcements</option>
+          <option value="changePasswordSection">Change Password</option>
           <option value="settingsSection">Settings</option>
         </select>
       </div>
@@ -278,7 +286,7 @@
         </section>
 
         <section id="employeesSection" class="page-section">
-          <div class="table-section">
+          <div id="employeeAdminView" class="table-section">
             <div class="section-header">
               <h2>All Employees</h2>
               <input type="text" id="employeesPageSearchInput" placeholder="Search employees..." class="section-search" />
@@ -292,6 +300,62 @@
                 </thead>
                 <tbody id="employeesOnlyTableBody"></tbody>
               </table>
+            </div>
+          </div>
+
+          <div id="employeeSelfProfileView" class="content-grid" style="display:none;">
+            <div class="form-section">
+              <h2>My Profile</h2>
+              <form id="employeeSelfProfileForm">
+                <div class="form-group">
+                  <label for="selfEmployeeId">Employee ID</label>
+                  <input type="text" id="selfEmployeeId" readonly />
+                </div>
+
+                <div class="form-group">
+                  <label for="selfEmployeeName">Full Name</label>
+                  <input type="text" id="selfEmployeeName" readonly />
+                </div>
+
+                <div class="form-group">
+                  <label for="selfEmployeeDepartment">Department</label>
+                  <input type="text" id="selfEmployeeDepartment" readonly />
+                </div>
+
+                <div class="form-group">
+                  <label for="selfEmployeePosition">Position</label>
+                  <input type="text" id="selfEmployeePosition" readonly />
+                </div>
+
+                <div class="form-group">
+                  <label for="selfPhone">Phone Number</label>
+                  <input type="text" id="selfPhone" placeholder="0991234567" />
+                </div>
+
+                <div class="form-group">
+                  <label for="selfEmail">Email</label>
+                  <input type="email" id="selfEmail" placeholder="john@example.com" />
+                </div>
+
+                <div class="form-group">
+                  <label for="selfAddress">Address</label>
+                  <input type="text" id="selfAddress" placeholder="Blantyre" />
+                </div>
+
+                <div class="form-group">
+                  <label for="selfEmergencyContact">Emergency Contact</label>
+                  <input type="text" id="selfEmergencyContact" placeholder="0887654321" />
+                </div>
+
+                <div class="button-group">
+                  <button type="submit" class="btn-primary">Update My Profile</button>
+                </div>
+              </form>
+            </div>
+
+            <div class="table-section">
+              <h2>My Info</h2>
+              <div id="employeeSelfProfileCard"></div>
             </div>
           </div>
         </section>
@@ -442,6 +506,75 @@
           </div>
         </section>
 
+        <section id="announcementsSection" class="page-section">
+          <div class="content-grid">
+            <div class="form-section" id="announcementAdminPanel">
+              <h2>Create Announcement</h2>
+              <form id="announcementForm">
+                <div class="form-group">
+                  <label for="announcementTitle">Title</label>
+                  <input type="text" id="announcementTitle" placeholder="Staff Meeting Notice" required />
+                </div>
+
+                <div class="form-group">
+                  <label for="announcementMessage">Message</label>
+                  <textarea id="announcementMessage" rows="6" placeholder="Write announcement here..." required></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="announcementAudience">Audience</label>
+                  <select id="announcementAudience">
+                    <option value="all">All Users</option>
+                    <option value="employee">Employees Only</option>
+                    <option value="admin_hr">Admin and HR Only</option>
+                  </select>
+                </div>
+
+                <div class="button-group">
+                  <button type="submit" class="btn-primary">Publish Announcement</button>
+                </div>
+              </form>
+            </div>
+
+            <div class="table-section">
+              <div class="section-header">
+                <h2>Announcements</h2>
+                <input type="text" id="announcementSearchInput" placeholder="Search announcements..." class="section-search" />
+              </div>
+              <div id="announcementsList" class="notification-list"></div>
+              <div class="empty-state" id="announcementsEmptyState">No announcements yet.</div>
+            </div>
+          </div>
+        </section>
+
+        <section id="changePasswordSection" class="page-section">
+          <div class="content-grid">
+            <div class="form-section">
+              <h2>Change Password</h2>
+              <form id="changePasswordForm">
+                <div class="form-group">
+                  <label for="currentPasswordInput">Current Password</label>
+                  <input type="password" id="currentPasswordInput" required />
+                </div>
+
+                <div class="form-group">
+                  <label for="newPasswordInput">New Password</label>
+                  <input type="password" id="newPasswordInput" required />
+                </div>
+
+                <div class="form-group">
+                  <label for="confirmNewPasswordInput">Confirm New Password</label>
+                  <input type="password" id="confirmNewPasswordInput" required />
+                </div>
+
+                <div class="button-group">
+                  <button type="submit" class="btn-primary">Change Password</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </section>
+
         <section id="settingsSection" class="page-section">
           <div class="content-grid">
             <div class="form-section">
@@ -482,12 +615,14 @@
                     <option value="employee">Employee</option>
                   </select>
                 </div>
+
                 <div class="form-group" id="accountEmployeeGroup" style="display:none;">
-                  <label for="accountEmployeeId">Link Employee</label>
+                  <label for="accountEmployeeId">Link To Employee</label>
                   <select id="accountEmployeeId">
                     <option value="">Select Employee</option>
                   </select>
                 </div>
+
                 <div class="button-group"><button type="submit" class="btn-primary">Create Account</button></div>
               </form>
             </div>
