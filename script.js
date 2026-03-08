@@ -291,21 +291,48 @@ function normalizeState(parsed) {
 }
 
 async function loadState() {
+  const oldRawV2 = localStorage.getItem("emsProStateV2");
+  const oldRawV3 = localStorage.getItem("emsProStateV3");
+
+  let localData = null;
+
+  try {
+    if (oldRawV3) {
+      localData = normalizeState(JSON.parse(oldRawV3));
+    } else if (oldRawV2) {
+      localData = normalizeState(JSON.parse(oldRawV2));
+    }
+  } catch {
+    localData = null;
+  }
+
   if (window.db?.enabled) {
     try {
       const remoteState = await window.db.loadAppState();
-      currentStorageMode = "supabase";
+
       if (remoteState) {
+        currentStorageMode = "supabase";
         return normalizeState(remoteState);
       }
+
+      if (localData) {
+        currentStorageMode = "supabase";
+        await window.db.saveAppState(localData);
+        return localData;
+      }
+
+      currentStorageMode = "supabase";
       await window.db.saveAppState(structuredClone(defaultState));
       return normalizeState(defaultState);
     } catch (error) {
       console.error("Supabase load failed:", error);
-      alert("Supabase connection failed. Falling back to local browser storage.");
     }
   }
 
+  currentStorageMode = "local";
+  if (localData) return localData;
+  return normalizeState(defaultState);
+}
   currentStorageMode = "local";
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return normalizeState(defaultState);
