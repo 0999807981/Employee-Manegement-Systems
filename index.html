@@ -29,7 +29,7 @@
             <h2>Run your workforce Digitally</h2>
             <p>
               Manage employee records, attendance, leave requests, payroll,
-              reports, notifications, announcements, performance and settings from one clean dashboard.
+              reports, notifications, announcements, holidays, performance and settings from one clean dashboard.
             </p>
           </div>
         </div>
@@ -65,7 +65,10 @@
 
           <div class="form-group">
             <label for="loginPassword">Password</label>
-            <input type="password" id="loginPassword" placeholder="Enter password" required />
+            <div class="password-field">
+              <input type="password" id="loginPassword" placeholder="Enter password" required />
+              <button type="button" id="toggleLoginPassword" class="password-toggle-btn">Show</button>
+            </div>
           </div>
 
           <button type="submit" class="btn-primary full-btn login-submit-btn">Login</button>
@@ -125,6 +128,10 @@
           <span class="nav-icon">📢</span>
           <span class="nav-label">Announcements</span>
         </li>
+        <li class="nav-item" data-section="holidaysSection">
+          <span class="nav-icon">🎉</span>
+          <span class="nav-label">Holidays</span>
+        </li>
         <li class="nav-item" data-section="changePasswordSection">
           <span class="nav-icon">🔐</span>
           <span class="nav-label">Change Password</span>
@@ -177,6 +184,7 @@
           <option value="reportsSection">Reports</option>
           <option value="notificationsSection">Notifications</option>
           <option value="announcementsSection">Announcements</option>
+          <option value="holidaysSection">Holidays</option>
           <option value="changePasswordSection">Change Password</option>
           <option value="settingsSection">Settings</option>
         </select>
@@ -274,6 +282,7 @@
                   <option value="Absent">Absent</option>
                   <option value="Leave">Leave</option>
                   <option value="Not Marked">Not Marked</option>
+                  <option value="Holiday">Holiday</option>
                 </select>
               </div>
 
@@ -483,7 +492,6 @@
             </div>
           </div>
 
-          <!-- Hidden form to keep script safe if needed -->
           <form id="payrollForm" style="display:none;">
             <select id="payrollEmployee"><option value="">Select Employee</option></select>
             <input type="month" id="payrollMonth" />
@@ -595,14 +603,79 @@
           </div>
         </section>
 
+        <section id="holidaysSection" class="page-section">
+          <div class="content-grid">
+            <div class="form-section" id="holidayAdminPanel">
+              <h2>Add Holiday</h2>
+              <form id="holidayForm">
+                <div class="form-group">
+                  <label for="holidayName">Holiday Name</label>
+                  <input type="text" id="holidayName" placeholder="Independence Day" required />
+                </div>
+                <div class="form-group">
+                  <label for="holidayDate">Holiday Date</label>
+                  <input type="date" id="holidayDate" required />
+                </div>
+                <div class="form-group">
+                  <label for="holidayDescription">Description</label>
+                  <textarea id="holidayDescription" rows="4" placeholder="Optional holiday note..."></textarea>
+                </div>
+                <button type="submit" class="btn-primary full-btn">Add Holiday</button>
+              </form>
+            </div>
+
+            <div class="table-section">
+              <div class="section-header">
+                <h2>Holiday List</h2>
+                <input type="text" id="holidaySearchInput" placeholder="Search holidays..." class="section-search" />
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Holiday Name</th>
+                      <th>Date</th>
+                      <th>Description</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="holidaysTableBody"></tbody>
+                </table>
+              </div>
+              <div class="empty-state" id="holidaysEmptyState">No holidays added yet.</div>
+            </div>
+          </div>
+        </section>
+
         <section id="changePasswordSection" class="page-section">
           <div class="content-grid">
             <div class="form-section">
               <h2>Change Password</h2>
               <form id="changePasswordForm">
-                <div class="form-group"><label for="currentPasswordInput">Current Password</label><input type="password" id="currentPasswordInput" required /></div>
-                <div class="form-group"><label for="newPasswordInput">New Password</label><input type="password" id="newPasswordInput" required /></div>
-                <div class="form-group"><label for="confirmNewPasswordInput">Confirm New Password</label><input type="password" id="confirmNewPasswordInput" required /></div>
+                <div class="form-group">
+                  <label for="currentPasswordInput">Current Password</label>
+                  <div class="password-field">
+                    <input type="password" id="currentPasswordInput" required />
+                    <button type="button" id="toggleCurrentPassword" class="password-toggle-btn">Show</button>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="newPasswordInput">New Password</label>
+                  <div class="password-field">
+                    <input type="password" id="newPasswordInput" required />
+                    <button type="button" id="toggleNewPassword" class="password-toggle-btn">Show</button>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="confirmNewPasswordInput">Confirm New Password</label>
+                  <div class="password-field">
+                    <input type="password" id="confirmNewPasswordInput" required />
+                    <button type="button" id="toggleConfirmNewPassword" class="password-toggle-btn">Show</button>
+                  </div>
+                </div>
+
                 <div class="button-group">
                   <button type="submit" class="btn-primary">Change Password</button>
                 </div>
@@ -659,7 +732,15 @@
               <form id="userAccountForm">
                 <div class="form-group"><label for="accountFullName">Full Name</label><input type="text" id="accountFullName" placeholder="Jane Admin" required /></div>
                 <div class="form-group"><label for="accountUsername">Username</label><input type="text" id="accountUsername" placeholder="janeadmin" required /></div>
-                <div class="form-group"><label for="accountPassword">Password</label><input type="password" id="accountPassword" placeholder="Enter password" required /></div>
+
+                <div class="form-group">
+                  <label for="accountPassword">Password</label>
+                  <div class="password-field">
+                    <input type="password" id="accountPassword" placeholder="Enter password" required />
+                    <button type="button" id="toggleAccountPassword" class="password-toggle-btn">Show</button>
+                  </div>
+                </div>
+
                 <div class="form-group">
                   <label for="accountRole">Role</label>
                   <select id="accountRole" required>
@@ -752,6 +833,7 @@
         <span><i class="legend-box legend-absent"></i> Absent</span>
         <span><i class="legend-box legend-leave"></i> Leave</span>
         <span><i class="legend-box legend-none"></i> Not Marked</span>
+        <span><i class="legend-box legend-holiday"></i> Holiday</span>
       </div>
       <div id="attendanceCalendarGrid" class="attendance-calendar-grid"></div>
     </div>
@@ -765,8 +847,23 @@
       <form id="forgotPasswordForm">
         <div class="form-group"><label for="forgotFullName">Full Name</label><input type="text" id="forgotFullName" placeholder="Default Admin" required /></div>
         <div class="form-group"><label for="forgotUsername">Username</label><input type="text" id="forgotUsername" placeholder="admin" required /></div>
-        <div class="form-group"><label for="forgotNewPassword">New Password</label><input type="password" id="forgotNewPassword" placeholder="Enter new password" required /></div>
-        <div class="form-group"><label for="forgotConfirmPassword">Confirm Password</label><input type="password" id="forgotConfirmPassword" placeholder="Confirm password" required /></div>
+
+        <div class="form-group">
+          <label for="forgotNewPassword">New Password</label>
+          <div class="password-field">
+            <input type="password" id="forgotNewPassword" placeholder="Enter new password" required />
+            <button type="button" id="toggleForgotNewPassword" class="password-toggle-btn">Show</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="forgotConfirmPassword">Confirm Password</label>
+          <div class="password-field">
+            <input type="password" id="forgotConfirmPassword" placeholder="Confirm password" required />
+            <button type="button" id="toggleForgotConfirmPassword" class="password-toggle-btn">Show</button>
+          </div>
+        </div>
+
         <button type="submit" class="btn-primary full-btn">Reset Password</button>
       </form>
     </div>

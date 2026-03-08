@@ -71,7 +71,8 @@ const defaultState = {
   leaveRecords: [],
   payrollReceipts: [],
   notifications: [],
-  announcements: []
+  announcements: [],
+  holidays: []
 };
 
 const SECTION_TITLES = {
@@ -79,11 +80,12 @@ const SECTION_TITLES = {
   employeesSection: "Employees",
   attendanceSection: "Attendance",
   leaveSection: "Leave Management",
-  payrollSection: "My Payslip",
+  payrollSection: "Payroll",
   performanceSection: "Employee Performance",
   reportsSection: "Reports",
   notificationsSection: "Notifications",
   announcementsSection: "Announcements",
+  holidaysSection: "Holiday Management",
   changePasswordSection: "Change Password",
   settingsSection: "System Settings"
 };
@@ -138,6 +140,14 @@ const forgotUsername = $("forgotUsername");
 const forgotNewPassword = $("forgotNewPassword");
 const forgotConfirmPassword = $("forgotConfirmPassword");
 
+const toggleLoginPassword = $("toggleLoginPassword");
+const toggleForgotNewPassword = $("toggleForgotNewPassword");
+const toggleForgotConfirmPassword = $("toggleForgotConfirmPassword");
+const toggleCurrentPassword = $("toggleCurrentPassword");
+const toggleNewPassword = $("toggleNewPassword");
+const toggleConfirmNewPassword = $("toggleConfirmNewPassword");
+const toggleAccountPassword = $("toggleAccountPassword");
+
 const globalSearchInput = $("globalSearchInput");
 const employeeSearchInput = $("employeeSearchInput");
 const employeesPageSearchInput = $("employeesPageSearchInput");
@@ -147,6 +157,7 @@ const payrollSearchInput = $("payrollSearchInput");
 const notificationSearchInput = $("notificationSearchInput");
 const performanceSearchInput = $("performanceSearchInput");
 const announcementSearchInput = $("announcementSearchInput");
+const holidaySearchInput = $("holidaySearchInput");
 
 const pageTitle = $("pageTitle");
 const roleText = $("roleText");
@@ -171,6 +182,14 @@ const usersEmptyState = $("usersEmptyState");
 const userSearchInput = $("userSearchInput");
 const announcementsList = $("announcementsList");
 const announcementsEmptyState = $("announcementsEmptyState");
+
+const holidaysTableBody = $("holidaysTableBody");
+const holidaysEmptyState = $("holidaysEmptyState");
+const holidayForm = $("holidayForm");
+const holidayName = $("holidayName");
+const holidayDate = $("holidayDate");
+const holidayDescription = $("holidayDescription");
+const holidayAdminPanel = $("holidayAdminPanel");
 
 const attendanceDate = $("attendanceDate");
 const attendanceEmployee = $("attendanceEmployee");
@@ -321,6 +340,7 @@ function normalizeState(parsed) {
   merged.payrollReceipts = merged.payrollReceipts || [];
   merged.notifications = merged.notifications || [];
   merged.announcements = merged.announcements || [];
+  merged.holidays = merged.holidays || [];
 
   return merged;
 }
@@ -452,6 +472,14 @@ function diffDays(start, end) {
   return Math.floor((b - a) / 86400000) + 1;
 }
 
+function isHoliday(date) {
+  return state.holidays.some((holiday) => holiday.date === date);
+}
+
+function getHolidayByDate(date) {
+  return state.holidays.find((holiday) => holiday.date === date) || null;
+}
+
 function isApprovedLeaveOnDate(employeeIdValue, date) {
   return state.leaveRecords.some(
     (record) =>
@@ -469,6 +497,7 @@ function getAttendanceRecordForDate(employeeIdValue, date) {
 }
 
 function getStatusForDate(employeeIdValue, date) {
+  if (isHoliday(date)) return "Holiday";
   const attendance = getAttendanceRecordForDate(employeeIdValue, date);
   if (attendance) return attendance.status;
   if (isApprovedLeaveOnDate(employeeIdValue, date)) return "Leave";
@@ -636,6 +665,7 @@ function configureNavForCurrentRole() {
     reportsSection: "Reports",
     notificationsSection: "Notifications",
     announcementsSection: "Announcements",
+    holidaysSection: "Holidays",
     changePasswordSection: "Change Password",
     settingsSection: "Settings"
   };
@@ -679,6 +709,7 @@ function applyRolePermissions() {
     exportPdfBtn.style.display = "block";
     globalSearchInput.parentElement.style.display = "block";
     if (announcementAdminPanel) announcementAdminPanel.style.display = "none";
+    if (holidayAdminPanel) holidayAdminPanel.style.display = "none";
   } else if (isEmployee()) {
     hideNav("dashboardSection");
     hideNav("performanceSection");
@@ -691,6 +722,7 @@ function applyRolePermissions() {
     exportPdfBtn.style.display = "none";
     globalSearchInput.parentElement.style.display = "none";
     if (announcementAdminPanel) announcementAdminPanel.style.display = "none";
+    if (holidayAdminPanel) holidayAdminPanel.style.display = "none";
   } else {
     showNav("dashboardSection");
     showNav("performanceSection");
@@ -703,6 +735,7 @@ function applyRolePermissions() {
     exportPdfBtn.style.display = "block";
     globalSearchInput.parentElement.style.display = "block";
     if (announcementAdminPanel) announcementAdminPanel.style.display = "block";
+    if (holidayAdminPanel) holidayAdminPanel.style.display = "block";
   }
 }
 
@@ -907,6 +940,7 @@ function getStatusBadge(status) {
   if (status === "Late") return `<span class="status late-status">Late</span>`;
   if (status === "Absent") return `<span class="status absent">Absent</span>`;
   if (status === "Leave") return `<span class="status leave-status">Leave</span>`;
+  if (status === "Holiday") return `<span class="status pending-status">Holiday</span>`;
   return status;
 }
 
@@ -1307,6 +1341,36 @@ function renderAnnouncements() {
     });
 }
 
+function renderHolidays() {
+  if (!holidaysTableBody) return;
+
+  const search = (holidaySearchInput?.value || "").toLowerCase().trim();
+  const rows = [...state.holidays]
+    .filter((holiday) =>
+      `${holiday.name} ${holiday.date} ${holiday.description || ""}`.toLowerCase().includes(search)
+    )
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  holidaysTableBody.innerHTML = "";
+  holidaysEmptyState.style.display = rows.length ? "none" : "block";
+
+  rows.forEach((holiday) => {
+    const index = state.holidays.findIndex((item) => item.id === holiday.id);
+    const actions = isAdmin()
+      ? `<button class="delete-btn action-btn" onclick="deleteHoliday(${index})">Delete</button>`
+      : `<span class="muted-text">View Only</span>`;
+
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${holiday.name}</td>
+      <td>${holiday.date}</td>
+      <td>${holiday.description || "-"}</td>
+      <td>${actions}</td>
+    `;
+    holidaysTableBody.appendChild(row);
+  });
+}
+
 function renderDepartmentsTable() {
   departmentsTableBody.innerHTML = "";
   state.departments.forEach((dep) => {
@@ -1500,6 +1564,8 @@ function renderActiveSectionData() {
     renderDashboardNotifications();
   } else if (activeSection === "announcementsSection") {
     renderAnnouncements();
+  } else if (activeSection === "holidaysSection") {
+    renderHolidays();
   } else if (activeSection === "settingsSection") {
     renderDepartmentsTable();
     renderUsersTable();
@@ -1609,6 +1675,12 @@ function renderHistoryTable() {
       });
     });
 
+  state.holidays.forEach((holiday) => {
+    if (!month || holiday.date.startsWith(month)) {
+      records.push({ date: holiday.date, status: "Holiday", department: "-" });
+    }
+  });
+
   const map = new Map();
   records.forEach((item) => map.set(item.date, item));
   const finalRecords = Array.from(map.values())
@@ -1627,6 +1699,7 @@ function renderHistoryTable() {
     if (record.status === "Present") statusClass = "present";
     if (record.status === "Late") statusClass = "late-status";
     if (record.status === "Absent") statusClass = "absent";
+    if (record.status === "Holiday") statusClass = "pending-status";
 
     const row = document.createElement("tr");
     row.innerHTML = `
@@ -1678,6 +1751,10 @@ function renderAttendanceCalendar() {
     if (status === "Leave") {
       dayClass = "leave-day";
       badgeClass = "leave-status";
+    }
+    if (status === "Holiday") {
+      dayClass = "holiday-day";
+      badgeClass = "pending-status";
     }
 
     const cell = document.createElement("div");
@@ -2112,6 +2189,46 @@ async function deleteAnnouncement(index) {
   renderAnnouncements();
 }
 
+async function createHoliday() {
+  if (!isAdmin()) return alert("Only admin can add holidays.");
+
+  const name = holidayName.value.trim();
+  const date = holidayDate.value;
+  const description = holidayDescription.value.trim();
+
+  if (!name || !date) return alert("Please fill holiday name and date.");
+
+  const exists = state.holidays.some((holiday) => holiday.date === date);
+  if (exists) return alert("A holiday already exists on that date.");
+
+  state.holidays.push({
+    id: "HD" + Date.now(),
+    name,
+    date,
+    description,
+    createdAt: new Date().toISOString()
+  });
+
+  addNotification("Holiday Added", `${name} was added for ${date}.`);
+  await saveState();
+  holidayForm.reset();
+  renderHolidays();
+  renderAll();
+}
+
+async function deleteHoliday(index) {
+  if (!isAdmin()) return alert("Only admin can delete holidays.");
+  const holiday = state.holidays[index];
+  if (!holiday) return;
+  if (!confirm("Delete this holiday?")) return;
+
+  state.holidays.splice(index, 1);
+  addNotification("Holiday Deleted", `${holiday.name} was removed.`);
+  await saveState();
+  renderHolidays();
+  renderAll();
+}
+
 function renderAll() {
   updateBranding();
   fillDepartmentSelects();
@@ -2124,6 +2241,7 @@ function renderAll() {
   renderPerformanceTable();
   renderNotifications();
   renderAnnouncements();
+  renderHolidays();
   renderDepartmentsTable();
   renderUsersTable();
   renderDashboardNotifications();
@@ -2217,6 +2335,12 @@ async function createLeaveRequest(employeeIdValue, leaveTypeValue, startDateValu
     return alert("End date cannot be before start date.");
   }
 
+  const leaveDates = datesBetween(startDateValue, endDateValue);
+  const holidayInside = leaveDates.some((date) => isHoliday(date));
+  if (holidayInside) {
+    return alert("Leave request cannot include holiday dates.");
+  }
+
   const days = diffDays(startDateValue, endDateValue);
 
   state.leaveRecords.push({
@@ -2285,6 +2409,8 @@ async function markAttendance() {
   const selectedStatus = attendanceStatusSelect.value;
 
   if (!employeeIdValue || !selectedDate) return alert("Please select employee and date.");
+  if (isHoliday(selectedDate)) return alert("Cannot mark attendance on a holiday.");
+
   const emp = getEmployeeById(employeeIdValue);
   if (!emp) return;
 
@@ -2377,6 +2503,13 @@ async function updateEmployeeSelfProfile() {
   await saveState();
   renderEmployeesSection();
   alert("Your profile was updated.");
+}
+
+function togglePasswordField(inputElement, buttonElement) {
+  if (!inputElement || !buttonElement) return;
+  const isPassword = inputElement.type === "password";
+  inputElement.type = isPassword ? "text" : "password";
+  buttonElement.textContent = isPassword ? "Hide" : "Show";
 }
 
 employeeImage?.addEventListener("change", function (e) {
@@ -2519,6 +2652,11 @@ announcementForm?.addEventListener("submit", async function (e) {
   await createAnnouncement();
 });
 
+holidayForm?.addEventListener("submit", async function (e) {
+  e.preventDefault();
+  await createHoliday();
+});
+
 document.querySelectorAll(".nav-item").forEach((item) => {
   item.addEventListener("click", function () {
     showSection(this.dataset.section);
@@ -2544,6 +2682,7 @@ notificationSearchInput?.addEventListener("input", function () {
 });
 performanceSearchInput?.addEventListener("input", renderPerformanceTable);
 announcementSearchInput?.addEventListener("input", renderAnnouncements);
+holidaySearchInput?.addEventListener("input", renderHolidays);
 userSearchInput?.addEventListener("input", renderUsersTable);
 departmentFilter?.addEventListener("change", renderDashboardTable);
 statusFilter?.addEventListener("change", renderDashboardTable);
@@ -2617,6 +2756,14 @@ historyModal?.addEventListener("click", (e) => e.target === historyModal && clos
 calendarModal?.addEventListener("click", (e) => e.target === calendarModal && closeModal(calendarModal));
 forgotPasswordModal?.addEventListener("click", (e) => e.target === forgotPasswordModal && closeModal(forgotPasswordModal));
 
+toggleLoginPassword?.addEventListener("click", () => togglePasswordField(loginPassword, toggleLoginPassword));
+toggleForgotNewPassword?.addEventListener("click", () => togglePasswordField(forgotNewPassword, toggleForgotNewPassword));
+toggleForgotConfirmPassword?.addEventListener("click", () => togglePasswordField(forgotConfirmPassword, toggleForgotConfirmPassword));
+toggleCurrentPassword?.addEventListener("click", () => togglePasswordField(currentPasswordInput, toggleCurrentPassword));
+toggleNewPassword?.addEventListener("click", () => togglePasswordField(newPasswordInput, toggleNewPassword));
+toggleConfirmNewPassword?.addEventListener("click", () => togglePasswordField(confirmNewPasswordInput, toggleConfirmNewPassword));
+toggleAccountPassword?.addEventListener("click", () => togglePasswordField(accountPassword, toggleAccountPassword));
+
 if (attendanceDate) attendanceDate.value = getCurrentDateValue();
 if (monthFilter) monthFilter.value = getCurrentMonthValue();
 if (payrollMonth) payrollMonth.value = getCurrentMonthValue();
@@ -2650,3 +2797,4 @@ window.deletePayrollReceipt = deletePayrollReceipt;
 window.deleteDepartment = deleteDepartment;
 window.deleteUserAccount = deleteUserAccount;
 window.deleteAnnouncement = deleteAnnouncement;
+window.deleteHoliday = deleteHoliday;
