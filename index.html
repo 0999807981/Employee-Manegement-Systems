@@ -132,6 +132,10 @@
           <span class="nav-icon">🎉</span>
           <span class="nav-label">Holidays</span>
         </li>
+        <li class="nav-item" data-section="auditSection">
+          <span class="nav-icon">🧾</span>
+          <span class="nav-label">Audit Logs</span>
+        </li>
         <li class="nav-item" data-section="changePasswordSection">
           <span class="nav-icon">🔐</span>
           <span class="nav-label">Change Password</span>
@@ -185,6 +189,7 @@
           <option value="notificationsSection">Notifications</option>
           <option value="announcementsSection">Announcements</option>
           <option value="holidaysSection">Holidays</option>
+          <option value="auditSection">Audit Logs</option>
           <option value="changePasswordSection">Change Password</option>
           <option value="settingsSection">Settings</option>
         </select>
@@ -455,74 +460,74 @@
           </div>
         </section>
 
-       <section id="payrollSection" class="page-section">
-  <div class="content-grid payroll-main-grid">
-    <div id="payrollGeneratorPanel" class="form-section">
-      <h2>Generate Payslip</h2>
-      <form id="payrollForm">
-        <div class="form-group">
-          <label for="payrollEmployee">Employee</label>
-          <select id="payrollEmployee" required>
-            <option value="">Select Employee</option>
-          </select>
-        </div>
+        <section id="payrollSection" class="page-section">
+          <div class="content-grid payroll-main-grid">
+            <div id="payrollGeneratorPanel" class="form-section">
+              <h2>Generate Payslip</h2>
+              <form id="payrollForm">
+                <div class="form-group">
+                  <label for="payrollEmployee">Employee</label>
+                  <select id="payrollEmployee" required>
+                    <option value="">Select Employee</option>
+                  </select>
+                </div>
 
-        <div class="form-group">
-          <label for="payrollMonth">Month</label>
-          <input type="month" id="payrollMonth" required />
-        </div>
+                <div class="form-group">
+                  <label for="payrollMonth">Month</label>
+                  <input type="month" id="payrollMonth" required />
+                </div>
 
-        <div class="form-group">
-          <label for="allowances">Allowances (MK)</label>
-          <input type="number" id="allowances" value="0" min="0" />
-        </div>
+                <div class="form-group">
+                  <label for="allowances">Allowances (MK)</label>
+                  <input type="number" id="allowances" value="0" min="0" />
+                </div>
 
-        <div class="form-group">
-          <label for="deductions">Deductions (MK)</label>
-          <input type="number" id="deductions" value="0" min="0" />
-        </div>
+                <div class="form-group">
+                  <label for="deductions">Deductions (MK)</label>
+                  <input type="number" id="deductions" value="0" min="0" />
+                </div>
 
-        <div class="button-group">
-          <button type="submit" class="btn-primary">Generate Payslip</button>
-        </div>
-      </form>
-    </div>
+                <div class="button-group">
+                  <button type="submit" class="btn-primary">Generate Payslip</button>
+                </div>
+              </form>
+            </div>
 
-    <div class="table-section">
-      <h2 id="payrollPreviewTitle">Payslip Preview</h2>
-      <div id="payslipCard" class="payslip-card"><p>No payslip generated yet.</p></div>
-      <div class="button-group">
-        <button id="printPayslipBtn" type="button" class="btn-secondary">Print Payslip</button>
-      </div>
-    </div>
-  </div>
+            <div class="table-section">
+              <h2 id="payrollPreviewTitle">Payslip Preview</h2>
+              <div id="payslipCard" class="payslip-card"><p>No payslip generated yet.</p></div>
+              <div class="button-group">
+                <button id="printPayslipBtn" type="button" class="btn-secondary">Print Payslip</button>
+              </div>
+            </div>
+          </div>
 
-  <div class="table-section" style="margin-top: 20px;">
-    <div class="section-header">
-      <h2 id="payrollHistoryTitle">Payroll Receipts History</h2>
-      <input type="text" id="payrollSearchInput" placeholder="Search payroll..." class="section-search" />
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Receipt ID</th>
-            <th>Employee</th>
-            <th>Month</th>
-            <th>Base Salary</th>
-            <th>Allowances</th>
-            <th>Deductions</th>
-            <th>Net Pay</th>
-            <th>Date Created</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="payrollReceiptsTableBody"></tbody>
-      </table>
-    </div>
-    <div class="empty-state" id="payrollReceiptsEmptyState">No payroll receipts generated yet.</div>
-  </div>
-</section>
+          <div class="table-section" style="margin-top: 20px;">
+            <div class="section-header">
+              <h2 id="payrollHistoryTitle">Payroll Receipts History</h2>
+              <input type="text" id="payrollSearchInput" placeholder="Search payroll..." class="section-search" />
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Receipt ID</th>
+                    <th>Employee</th>
+                    <th>Month</th>
+                    <th>Base Salary</th>
+                    <th>Allowances</th>
+                    <th>Deductions</th>
+                    <th>Net Pay</th>
+                    <th>Date Created</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="payrollReceiptsTableBody"></tbody>
+              </table>
+            </div>
+            <div class="empty-state" id="payrollReceiptsEmptyState">No payroll receipts generated yet.</div>
+          </div>
+        </section>
 
         <section id="performanceSection" class="page-section">
           <section class="summary-cards performance-summary-cards">
@@ -670,33 +675,33 @@
             </div>
           </div>
         </section>
-        
+
         <section id="auditSection" class="page-section">
-  <div class="table-section">
-    <div class="section-header">
-      <h2>Audit Logs</h2>
-      <input type="text" id="auditSearchInput" placeholder="Search audit logs..." class="section-search" />
-    </div>
+          <div class="table-section">
+            <div class="section-header">
+              <h2>Audit Logs</h2>
+              <input type="text" id="auditSearchInput" placeholder="Search audit logs..." class="section-search" />
+            </div>
 
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Date & Time</th>
-            <th>User</th>
-            <th>Role</th>
-            <th>Action</th>
-            <th>Module</th>
-            <th>Details</th>
-          </tr>
-        </thead>
-        <tbody id="auditTableBody"></tbody>
-      </table>
-    </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date & Time</th>
+                    <th>User</th>
+                    <th>Role</th>
+                    <th>Action</th>
+                    <th>Module</th>
+                    <th>Details</th>
+                  </tr>
+                </thead>
+                <tbody id="auditTableBody"></tbody>
+              </table>
+            </div>
 
-    <div class="empty-state" id="auditEmptyState">No audit logs yet.</div>
-  </div>
-</section>
+            <div class="empty-state" id="auditEmptyState">No audit logs yet.</div>
+          </div>
+        </section>
 
         <section id="changePasswordSection" class="page-section">
           <div class="content-grid">
