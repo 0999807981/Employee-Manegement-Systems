@@ -1194,3 +1194,12 @@ tbody tr:hover {
     align-items: flex-start;
   }
 }
+.payroll-main-grid {
+  grid-template-columns: 380px 1fr;
+}
+
+@media (max-width: 1100px) {
+  .payroll-main-grid {
+    grid-template-columns: 1fr;
+  }
+}

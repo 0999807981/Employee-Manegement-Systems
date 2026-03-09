@@ -215,6 +215,7 @@ const payslipCard = $("payslipCard");
 const printPayslipBtn = $("printPayslipBtn");
 const payrollPreviewTitle = $("payrollPreviewTitle");
 const payrollHistoryTitle = $("payrollHistoryTitle");
+const payrollGeneratorPanel = $("payrollGeneratorPanel");
 
 const performanceForm = $("performanceForm");
 const performanceEmployee = $("performanceEmployee");
@@ -1192,6 +1193,7 @@ function renderPayrollReceiptsTable() {
 
     if (payrollPreviewTitle) payrollPreviewTitle.textContent = "My Payslip";
     if (payrollHistoryTitle) payrollHistoryTitle.textContent = "My Payslip History";
+    if (payrollGeneratorPanel) payrollGeneratorPanel.style.display = "none";
 
     rows = rows.filter((r) =>
       `${r.receiptId} ${r.employeeName} ${r.month}`.toLowerCase().includes(search)
@@ -1199,6 +1201,7 @@ function renderPayrollReceiptsTable() {
   } else {
     if (payrollPreviewTitle) payrollPreviewTitle.textContent = "Payslip Preview";
     if (payrollHistoryTitle) payrollHistoryTitle.textContent = "Payroll Receipts History";
+    if (payrollGeneratorPanel) payrollGeneratorPanel.style.display = "block";
 
     rows = rows.filter((r) =>
       `${r.receiptId} ${r.employeeName} ${r.month}`.toLowerCase().includes(search)
