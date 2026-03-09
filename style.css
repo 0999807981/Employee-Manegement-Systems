@@ -1203,3 +1203,18 @@ tbody tr:hover {
     grid-template-columns: 1fr;
   }
 }
+.payroll-main-grid {
+  grid-template-columns: 380px 1fr;
+}
+
+@media (max-width: 1100px) {
+  .payroll-main-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+#auditTableBody td:last-child {
+  min-width: 260px;
+  color: var(--soft);
+  line-height: 1.5;
+}

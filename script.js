@@ -72,7 +72,8 @@ const defaultState = {
   payrollReceipts: [],
   notifications: [],
   announcements: [],
-  holidays: []
+  holidays: [],
+  auditLogs: []
 };
 
 const SECTION_TITLES = {
@@ -86,6 +87,7 @@ const SECTION_TITLES = {
   notificationsSection: "Notifications",
   announcementsSection: "Announcements",
   holidaysSection: "Holiday Management",
+  auditSection: "Audit Logs",
   changePasswordSection: "Change Password",
   settingsSection: "System Settings"
 };
@@ -158,6 +160,7 @@ const notificationSearchInput = $("notificationSearchInput");
 const performanceSearchInput = $("performanceSearchInput");
 const announcementSearchInput = $("announcementSearchInput");
 const holidaySearchInput = $("holidaySearchInput");
+const auditSearchInput = $("auditSearchInput");
 
 const pageTitle = $("pageTitle");
 const roleText = $("roleText");
@@ -182,6 +185,8 @@ const usersEmptyState = $("usersEmptyState");
 const userSearchInput = $("userSearchInput");
 const announcementsList = $("announcementsList");
 const announcementsEmptyState = $("announcementsEmptyState");
+const auditTableBody = $("auditTableBody");
+const auditEmptyState = $("auditEmptyState");
 
 const holidaysTableBody = $("holidaysTableBody");
 const holidaysEmptyState = $("holidaysEmptyState");
@@ -342,6 +347,7 @@ function normalizeState(parsed) {
   merged.notifications = merged.notifications || [];
   merged.announcements = merged.announcements || [];
   merged.holidays = merged.holidays || [];
+  merged.auditLogs = merged.auditLogs || [];
 
   return merged;
 }
@@ -425,6 +431,33 @@ function formatNiceDate(dateString) {
     month: "short",
     day: "numeric"
   });
+}
+
+function formatDateTime(dateString) {
+  if (!dateString) return "-";
+  const date = new Date(dateString);
+  return date.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function addAuditLog(action, module, details) {
+  state.auditLogs.unshift({
+    id: "LG" + Date.now() + Math.floor(Math.random() * 1000),
+    action,
+    module,
+    details,
+    createdAt: new Date().toISOString(),
+    userFullName: currentUser?.fullName || "System",
+    username: currentUser?.username || "system",
+    role: currentUser?.role || "system"
+  });
+
+  state.auditLogs = state.auditLogs.slice(0, 1000);
 }
 
 function getCurrentDateValue() {
@@ -667,6 +700,7 @@ function configureNavForCurrentRole() {
     notificationsSection: "Notifications",
     announcementsSection: "Announcements",
     holidaysSection: "Holidays",
+    auditSection: "Audit Logs",
     changePasswordSection: "Change Password",
     settingsSection: "Settings"
   };
@@ -704,6 +738,7 @@ function applyRolePermissions() {
 
   if (isHR()) {
     hideNav("settingsSection");
+    hideNav("auditSection");
     backupBtn.style.display = "none";
     restoreInput.parentElement.style.display = "none";
     exportExcelBtn.style.display = "block";
@@ -716,6 +751,7 @@ function applyRolePermissions() {
     hideNav("performanceSection");
     hideNav("reportsSection");
     hideNav("settingsSection");
+    hideNav("auditSection");
 
     backupBtn.style.display = "none";
     restoreInput.parentElement.style.display = "none";
@@ -729,6 +765,7 @@ function applyRolePermissions() {
     showNav("performanceSection");
     showNav("reportsSection");
     showNav("settingsSection");
+    showNav("auditSection");
 
     backupBtn.style.display = "block";
     restoreInput.parentElement.style.display = "block";
@@ -1374,6 +1411,32 @@ function renderHolidays() {
   });
 }
 
+function renderAuditLogs() {
+  if (!auditTableBody || !auditEmptyState) return;
+
+  const search = (auditSearchInput?.value || "").toLowerCase().trim();
+
+  const rows = [...state.auditLogs].filter((log) =>
+    `${log.userFullName} ${log.username} ${log.role} ${log.action} ${log.module} ${log.details}`.toLowerCase().includes(search)
+  );
+
+  auditTableBody.innerHTML = "";
+  auditEmptyState.style.display = rows.length ? "none" : "block";
+
+  rows.forEach((log) => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${formatDateTime(log.createdAt)}</td>
+      <td>${log.userFullName}<br><small class="muted-text">${log.username}</small></td>
+      <td><span class="status ${log.role === "admin" ? "pending-status" : log.role === "hr" ? "present" : "leave-status"}">${String(log.role).toUpperCase()}</span></td>
+      <td>${log.action}</td>
+      <td>${log.module}</td>
+      <td>${log.details}</td>
+    `;
+    auditTableBody.appendChild(row);
+  });
+}
+
 function renderDepartmentsTable() {
   departmentsTableBody.innerHTML = "";
   state.departments.forEach((dep) => {
@@ -1569,6 +1632,8 @@ function renderActiveSectionData() {
     renderAnnouncements();
   } else if (activeSection === "holidaysSection") {
     renderHolidays();
+  } else if (activeSection === "auditSection") {
+    renderAuditLogs();
   } else if (activeSection === "settingsSection") {
     renderDepartmentsTable();
     renderUsersTable();
@@ -1797,6 +1862,7 @@ async function approveLeave(index) {
 
   record.status = "Approved";
   addNotification("Leave Approved", `${record.employeeName}'s ${record.leaveType} was approved.`);
+  addAuditLog("Leave Approved", "Leave", `${record.employeeName} (${record.leaveId}) was approved.`);
   await saveState();
   renderAll();
 }
@@ -1806,6 +1872,7 @@ async function rejectLeave(index) {
   if (!record) return;
   record.status = "Rejected";
   addNotification("Leave Rejected", `${record.employeeName}'s ${record.leaveType} was rejected.`);
+  addAuditLog("Leave Rejected", "Leave", `${record.employeeName} (${record.leaveId}) was rejected.`);
   await saveState();
   renderAll();
 }
@@ -1816,6 +1883,7 @@ async function deleteLeave(index) {
   if (!confirm("Delete this leave request?")) return;
   state.leaveRecords.splice(index, 1);
   addNotification("Leave Deleted", `Leave request ${record.leaveId} was deleted.`);
+  addAuditLog("Leave Deleted", "Leave", `${record.employeeName} (${record.leaveId}) was deleted.`);
   await saveState();
   renderAll();
 }
@@ -1843,6 +1911,7 @@ async function deletePayrollReceipt(index) {
   if (!confirm("Delete this payroll receipt?")) return;
   state.payrollReceipts.splice(index, 1);
   addNotification("Payroll Deleted", `Payroll receipt ${receipt.receiptId} was deleted.`);
+  addAuditLog("Payslip Deleted", "Payroll", `${receipt.employeeName} (${receipt.receiptId}) payroll receipt was deleted.`);
   await saveState();
   renderAll();
 }
@@ -1929,8 +1998,9 @@ function restoreData(file) {
   reader.onload = async function (e) {
     try {
       state = normalizeState(JSON.parse(e.target.result));
-      await saveState();
       addNotification("Backup Restored", "System data was restored from backup.");
+      addAuditLog("Backup Restored", "System", "System data was restored from backup file.");
+      await saveState();
       checkLoginState();
     } catch {
       alert("Invalid backup file.");
@@ -1987,6 +2057,7 @@ async function generatePayslip() {
   else state.payrollReceipts.push(receipt);
 
   addNotification("Payroll Generated", `Payslip created for ${emp.name} (${monthValue}).`);
+  addAuditLog("Payslip Generated", "Payroll", `${emp.name} (${emp.id}) payroll was generated for ${monthValue}.`);
   await saveState();
   renderAll();
 }
@@ -2065,6 +2136,7 @@ async function createUserAccount() {
   });
 
   addNotification("Account Created", `${fullName} was added as ${role.toUpperCase()}.`);
+  addAuditLog("Account Created", "Users", `${fullName} was created as ${role.toUpperCase()}.`);
   await saveState();
   renderUsersTable();
   renderDashboardNotifications();
@@ -2089,6 +2161,7 @@ async function deleteUserAccount(userId) {
 
   state.users = state.users.filter((u) => u.id !== userId);
   addNotification("Account Deleted", `${user.fullName}'s account was deleted.`);
+  addAuditLog("Account Deleted", "Users", `${user.fullName} (${user.username}) account was deleted.`);
   await saveState();
   renderUsersTable();
   renderDashboardNotifications();
@@ -2113,6 +2186,7 @@ async function resetPasswordFromLogin() {
 
   user.password = newPassword;
   addNotification("Password Reset", `${user.fullName} reset their password.`);
+  addAuditLog("Password Reset", "Security", `${user.fullName} reset their password from login screen.`);
   await saveState();
 
   if (currentUser?.username === user.username) {
@@ -2152,6 +2226,7 @@ async function changeOwnPassword() {
   const userIndex = state.users.findIndex((u) => u.id === currentUser.id);
   if (userIndex !== -1) state.users[userIndex].password = newPassword;
 
+  addAuditLog("Password Changed", "Security", `${currentUser.fullName} changed their password.`);
   await saveState();
   localStorage.setItem("emsCurrentUser", JSON.stringify(currentUser));
   changePasswordForm.reset();
@@ -2177,6 +2252,7 @@ async function createAnnouncement() {
   });
 
   addNotification("Announcement Created", `${title} was published.`);
+  addAuditLog("Announcement Created", "Announcements", `${title} announcement was published.`);
   await saveState();
   announcementForm.reset();
   renderAnnouncements();
@@ -2188,6 +2264,7 @@ async function deleteAnnouncement(index) {
   if (!announcement) return;
   if (!confirm("Delete this announcement?")) return;
   state.announcements.splice(index, 1);
+  addAuditLog("Announcement Deleted", "Announcements", `${announcement.title} announcement was deleted.`);
   await saveState();
   renderAnnouncements();
 }
@@ -2213,6 +2290,7 @@ async function createHoliday() {
   });
 
   addNotification("Holiday Added", `${name} was added for ${date}.`);
+  addAuditLog("Holiday Added", "Holidays", `${name} was added for ${date}.`);
   await saveState();
   holidayForm.reset();
   renderHolidays();
@@ -2227,6 +2305,7 @@ async function deleteHoliday(index) {
 
   state.holidays.splice(index, 1);
   addNotification("Holiday Deleted", `${holiday.name} was removed.`);
+  addAuditLog("Holiday Deleted", "Holidays", `${holiday.name} was deleted.`);
   await saveState();
   renderHolidays();
   renderAll();
@@ -2245,6 +2324,7 @@ function renderAll() {
   renderNotifications();
   renderAnnouncements();
   renderHolidays();
+  renderAuditLogs();
   renderDepartmentsTable();
   renderUsersTable();
   renderDashboardNotifications();
@@ -2267,6 +2347,10 @@ function resetEmployeeForm() {
 }
 
 function showSection(sectionId) {
+  if (sectionId === "auditSection" && !isAdmin()) {
+    sectionId = isEmployee() ? "employeesSection" : "dashboardSection";
+  }
+
   if (sectionId === "settingsSection" && (isHR() || isEmployee())) {
     sectionId = isEmployee() ? "employeesSection" : "dashboardSection";
   }
@@ -2308,6 +2392,7 @@ async function addDepartment() {
   state.departments.push(value);
   newDepartmentInput.value = "";
   addNotification("Department Added", `${value} department was added.`);
+  addAuditLog("Department Added", "Departments", `${value} department was added.`);
   await saveState();
   renderAll();
 }
@@ -2319,6 +2404,7 @@ async function deleteDepartment(dep) {
   }
   state.departments = state.departments.filter((d) => d !== dep);
   addNotification("Department Deleted", `${dep} department was deleted.`);
+  addAuditLog("Department Deleted", "Departments", `${dep} department was deleted.`);
   await saveState();
   renderAll();
 }
@@ -2361,6 +2447,7 @@ async function createLeaveRequest(employeeIdValue, leaveTypeValue, startDateValu
   });
 
   addNotification("Leave Requested", `${emp.name} submitted a ${leaveTypeValue} request.`);
+  addAuditLog("Leave Requested", "Leave", `${emp.name} submitted a ${leaveTypeValue} request from ${startDateValue} to ${endDateValue}.`);
   await saveState();
   renderAll();
 }
@@ -2402,6 +2489,7 @@ async function deleteEmployee(index) {
   state.users = state.users.filter((u) => u.employeeId !== emp.id);
 
   addNotification("Employee Deleted", `${emp.name} was removed from the system.`);
+  addAuditLog("Employee Deleted", "Employees", `${emp.name} (${emp.id}) was deleted.`);
   await saveState();
   renderAll();
 }
@@ -2433,6 +2521,7 @@ async function markAttendance() {
   else state.attendanceRecords.push(record);
 
   addNotification("Attendance Updated", `${emp.name} marked ${selectedStatus} for ${selectedDate}.`);
+  addAuditLog("Attendance Marked", "Attendance", `${emp.name} (${emp.id}) marked ${selectedStatus} for ${selectedDate}.`);
   await saveState();
   renderAll();
 }
@@ -2451,6 +2540,7 @@ async function clearSingleAttendance() {
   if (before === state.attendanceRecords.length) return alert("No record found.");
 
   addNotification("Attendance Cleared", `Attendance record removed for ${selectedDate}.`);
+  addAuditLog("Attendance Cleared", "Attendance", `Single attendance record removed for ${selectedDate}.`);
   await saveState();
   renderAll();
 }
@@ -2462,6 +2552,7 @@ async function clearAllAttendanceForDate() {
 
   state.attendanceRecords = state.attendanceRecords.filter((r) => r.date !== selectedDate);
   addNotification("Attendance Cleared", `All attendance records for ${selectedDate} were cleared.`);
+  addAuditLog("Attendance Cleared", "Attendance", `All attendance records removed for ${selectedDate}.`);
   await saveState();
   renderAll();
 }
@@ -2488,6 +2579,7 @@ async function savePerformanceRecord() {
   };
 
   addNotification("Performance Updated", `Performance record saved for ${emp.name}.`);
+  addAuditLog("Performance Updated", "Performance", `Performance record saved for ${emp.name} (${emp.id}).`);
   await saveState();
   renderAll();
   performanceForm.reset();
@@ -2503,6 +2595,7 @@ async function updateEmployeeSelfProfile() {
   emp.emergencyContact = selfEmergencyContact.value.trim();
 
   addNotification("Profile Updated", `${emp.name} updated their personal profile.`);
+  addAuditLog("Profile Updated", "Employees", `${emp.name} updated their personal profile.`);
   await saveState();
   renderEmployeesSection();
   alert("Your profile was updated.");
@@ -2533,6 +2626,8 @@ employeeImage?.addEventListener("change", function (e) {
 employeeForm?.addEventListener("submit", async function (e) {
   e.preventDefault();
 
+  const isEditingEmployee = editIndex !== -1;
+
   const employeeData = {
     id: employeeId.value.trim(),
     name: employeeName.value.trim(),
@@ -2553,7 +2648,7 @@ employeeForm?.addEventListener("submit", async function (e) {
     },
     documents: Array.from(employeeDocuments.files || []).map((file) => file.name),
     performance:
-      editIndex !== -1
+      isEditingEmployee
         ? state.employees[editIndex].performance || {
             rating: 0,
             tasksCompleted: 0,
@@ -2575,14 +2670,16 @@ employeeForm?.addEventListener("submit", async function (e) {
   const duplicate = state.employees.findIndex((emp, idx) => emp.id === employeeData.id && idx !== editIndex);
   if (duplicate !== -1) return alert("Employee ID already exists.");
 
-  if (editIndex === -1) {
+  if (!isEditingEmployee) {
     state.employees.push(employeeData);
     addNotification("Employee Added", `${employeeData.name} was added to the system.`);
+    addAuditLog("Employee Added", "Employees", `${employeeData.name} (${employeeData.id}) was added.`);
   } else {
     if (!selectedImageBase64) employeeData.image = state.employees[editIndex].image || "";
     if (!employeeData.documents.length) employeeData.documents = state.employees[editIndex].documents || [];
     state.employees[editIndex] = employeeData;
     addNotification("Employee Updated", `${employeeData.name}'s profile was updated.`);
+    addAuditLog("Employee Updated", "Employees", `${employeeData.name} (${employeeData.id}) was updated.`);
   }
 
   await saveState();
@@ -2631,6 +2728,7 @@ settingsForm?.addEventListener("submit", async function (e) {
   state.settings.defaultSickLeave = Number(defaultSickLeaveInput.value || 10);
 
   addNotification("Settings Updated", "System settings were updated.");
+  addAuditLog("Settings Updated", "Settings", "System settings were updated.");
   await saveState();
   renderAll();
 });
@@ -2686,6 +2784,7 @@ notificationSearchInput?.addEventListener("input", function () {
 performanceSearchInput?.addEventListener("input", renderPerformanceTable);
 announcementSearchInput?.addEventListener("input", renderAnnouncements);
 holidaySearchInput?.addEventListener("input", renderHolidays);
+auditSearchInput?.addEventListener("input", renderAuditLogs);
 userSearchInput?.addEventListener("input", renderUsersTable);
 departmentFilter?.addEventListener("change", renderDashboardTable);
 statusFilter?.addEventListener("change", renderDashboardTable);
