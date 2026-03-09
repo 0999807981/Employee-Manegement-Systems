@@ -626,11 +626,13 @@ function refreshCurrentUserFromState() {
   if (fresh) localStorage.setItem("emsCurrentUser", JSON.stringify(fresh));
   else localStorage.removeItem("emsCurrentUser");
 }
-
 function checkLoginState() {
   refreshCurrentUserFromState();
 
   if (currentUser) {
+    closeModal(forgotPasswordModal);
+    forgotPasswordForm?.reset();
+
     loginScreen.classList.remove("show");
     appContainer.style.display = "grid";
     applyRolePermissions();
@@ -640,6 +642,9 @@ function checkLoginState() {
       showSection("employeesSection");
     }
   } else {
+    closeModal(forgotPasswordModal);
+    forgotPasswordForm?.reset();
+
     loginScreen.classList.add("show");
     appContainer.style.display = "none";
   }
@@ -662,13 +667,11 @@ async function login(username, password) {
 
   currentUser = user;
   localStorage.setItem("emsCurrentUser", JSON.stringify(user));
-  checkLoginState();
-}
 
-function logout() {
-  localStorage.removeItem("emsCurrentUser");
-  currentUser = null;
-  closeActionMenu();
+  closeModal(forgotPasswordModal);
+  forgotPasswordForm?.reset();
+  loginForm?.reset();
+
   checkLoginState();
 }
 
