@@ -1,24 +1,24 @@
 :root {
-  --bg: linear-gradient(135deg, #eef4ff, #f8fbff);
+  --bg: #ffffff;
   --text: #1f2937;
-  --card: rgba(255, 255, 255, 0.96);
-  --card-border: #dbe4f0;
+  --card: #ffffff;
+  --card-border: #e2e8f0;
   --soft: #64748b;
   --sidebar: linear-gradient(180deg, #0f172a, #111827);
-  --thead: #eff6ff;
-  --hover: #f8fbff;
+  --thead: #f8fafc;
+  --hover: #f8fafc;
   --input-bg: #ffffff;
 }
 
 body.dark-mode {
-  --bg: linear-gradient(135deg, #0b1220, #111827);
+  --bg: #0b1120;
   --text: #e5e7eb;
-  --card: rgba(17, 24, 39, 0.96);
-  --card-border: #334155;
+  --card: #111827;
+  --card-border: #1e293b;
   --soft: #94a3b8;
   --sidebar: linear-gradient(180deg, #020617, #0f172a);
   --thead: #1e293b;
-  --hover: #172033;
+  --hover: #1a2540;
   --input-bg: #0f172a;
 }
 
@@ -202,14 +202,8 @@ button {
   flex-wrap: wrap;
   padding: 28px 28px 18px;
   margin-bottom: 8px;
-  background: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
-}
-
-body.dark-mode .topbar {
-  background: rgba(11, 18, 32, 0.78);
-  border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+  background: var(--card);
+  border-bottom: 1px solid var(--card-border);
 }
 
 .topbar h1 {
@@ -305,6 +299,24 @@ textarea,
   color: #dc2626;
 }
 
+/* Logout button in topbar */
+.topbar-logout-btn {
+  background: #ef4444;
+  color: white;
+  padding: 10px 18px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+  transition: 0.25s ease;
+}
+
+.topbar-logout-btn:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
 .mobile-nav-bar {
   display: none;
   padding: 0 20px 18px;
@@ -382,8 +394,8 @@ textarea,
   background: var(--card);
   padding: 22px;
   border-radius: 20px;
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
-  border: 1px solid rgba(148, 163, 184, 0.08);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+  border: 1px solid var(--card-border);
 }
 
 .form-section h2,
@@ -622,7 +634,7 @@ tbody tr:hover {
   padding: 14px;
   border: 1px solid var(--card-border);
   border-radius: 14px;
-  background: rgba(148, 163, 184, 0.06);
+  background: var(--hover);
   display: flex;
   justify-content: space-between;
   gap: 12px;
@@ -642,7 +654,7 @@ tbody tr:hover {
   padding: 14px;
   border: 1px solid var(--card-border);
   border-radius: 14px;
-  background: rgba(148, 163, 184, 0.06);
+  background: var(--hover);
 }
 
 .notification-item h4 {
@@ -751,7 +763,7 @@ tbody tr:hover {
 }
 
 .history-stat-box {
-  background: rgba(148, 163, 184, 0.08);
+  background: var(--hover);
   border: 1px solid var(--card-border);
   border-radius: 16px;
   padding: 16px;
@@ -1041,7 +1053,7 @@ tbody tr:hover {
   border: 1px solid var(--card-border);
   border-radius: 16px;
   padding: 18px;
-  background: rgba(148, 163, 184, 0.06);
+  background: var(--hover);
 }
 
 .payslip-row {
@@ -1079,6 +1091,26 @@ tbody tr:hover {
   text-align: center;
   padding: 16px;
   color: var(--soft);
+}
+
+.password-field {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.password-field input {
+  flex: 1;
+}
+
+.password-toggle-btn {
+  padding: 10px 14px;
+  background: var(--thead);
+  color: var(--text);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  font-size: 13px;
+  flex-shrink: 0;
 }
 
 @media (max-width: 1400px) {
@@ -1132,9 +1164,6 @@ tbody tr:hover {
   .topbar {
     position: static;
     padding: 28px 20px 18px;
-    background: transparent;
-    backdrop-filter: none;
-    border-bottom: none;
   }
 
   .mobile-nav-bar {
@@ -1194,15 +1223,7 @@ tbody tr:hover {
     align-items: flex-start;
   }
 }
-.payroll-main-grid {
-  grid-template-columns: 380px 1fr;
-}
 
-@media (max-width: 1100px) {
-  .payroll-main-grid {
-    grid-template-columns: 1fr;
-  }
-}
 .payroll-main-grid {
   grid-template-columns: 380px 1fr;
 }
