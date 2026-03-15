@@ -4,7 +4,11 @@
   --card: #ffffff;
   --card-border: #e2e8f0;
   --soft: #64748b;
-  --sidebar: linear-gradient(180deg, #0f172a, #111827);
+  --sidebar: #ffffff;
+  --sidebar-border: #e2e8f0;
+  --nav-text: #1f2937;
+  --nav-hover: #f1f5f9;
+  --nav-item-border: #e2e8f0;
   --thead: #f8fafc;
   --hover: #f8fafc;
   --input-bg: #ffffff;
@@ -16,7 +20,11 @@ body.dark-mode {
   --card: #111827;
   --card-border: #1e293b;
   --soft: #94a3b8;
-  --sidebar: linear-gradient(180deg, #020617, #0f172a);
+  --sidebar: #0f172a;
+  --sidebar-border: #1e293b;
+  --nav-text: #e5e7eb;
+  --nav-hover: rgba(255,255,255,0.08);
+  --nav-item-border: rgba(255,255,255,0.06);
   --thead: #1e293b;
   --hover: #1a2540;
   --input-bg: #0f172a;
@@ -67,15 +75,15 @@ button {
 
 .sidebar {
   background: var(--sidebar);
-  color: white;
+  color: var(--nav-text);
   padding: 18px 12px;
-  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.12);
+  box-shadow: 4px 0 8px rgba(0, 0, 0, 0.06);
   height: 100vh;
   position: sticky;
   top: 0;
   overflow-y: auto;
   z-index: 100;
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  border-right: 1px solid var(--sidebar-border);
 }
 
 .brand {
@@ -85,8 +93,8 @@ button {
   margin-bottom: 22px;
   padding: 14px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: transparent;
+  border: 1px solid var(--nav-item-border);
 }
 
 .brand-mark {
@@ -101,19 +109,19 @@ button {
   font-size: 18px;
   font-weight: 800;
   letter-spacing: 1px;
-  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.35);
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.25);
 }
 
 .brand-text h2 {
   font-size: 20px;
-  color: white;
+  color: var(--nav-text);
   line-height: 1.1;
 }
 
 .brand-text p {
   margin-top: 4px;
   font-size: 12px;
-  color: #cbd5e1;
+  color: var(--soft);
   letter-spacing: 0.5px;
   text-transform: uppercase;
 }
@@ -129,14 +137,15 @@ button {
   gap: 12px;
   width: 100%;
   padding: 15px 14px 15px 16px;
-  margin-bottom: 10px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.04);
+  margin-bottom: 6px;
+  border-radius: 8px;
+  background: transparent;
   cursor: pointer;
   transition: 0.22s ease;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid transparent;
   text-align: left;
   overflow: hidden;
+  color: var(--nav-text);
 }
 
 .nav-item::before {
@@ -151,18 +160,19 @@ button {
 }
 
 .nav-item:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--nav-hover);
+  border-color: var(--nav-item-border);
 }
 
 .nav-item:hover::before {
-  background: rgba(59, 130, 246, 0.55);
+  background: #3b82f6;
 }
 
 .nav-item.active {
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.95), rgba(29, 78, 216, 0.95));
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
   color: white;
-  border-color: rgba(255, 255, 255, 0.14);
-  box-shadow: 0 10px 18px rgba(29, 78, 216, 0.22);
+  border-color: transparent;
+  box-shadow: 0 4px 14px rgba(29, 78, 216, 0.25);
 }
 
 .nav-item.active::before {
