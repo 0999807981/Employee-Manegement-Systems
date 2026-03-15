@@ -341,31 +341,36 @@ textarea,
 .card {
   padding: 22px;
   border-radius: 20px;
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
 }
 
 .gradient-card {
-  color: white;
+  color: var(--text);
 }
 
-.blue-card,
-.green-card,
-.red-card,
-.purple-card,
-.yellow-card,
-.teal-card,
-.orange-card {
-  background: linear-gradient(135deg, #16233b, #0f172a);
-}
+.blue-card   { border-left: 5px solid #2563eb; }
+.green-card  { border-left: 5px solid #16a34a; }
+.red-card    { border-left: 5px solid #dc2626; }
+.purple-card { border-left: 5px solid #7c3aed; }
+.yellow-card { border-left: 5px solid #d97706; }
+.teal-card   { border-left: 5px solid #0891b2; }
+.orange-card { border-left: 5px solid #ea580c; }
 
 .card h3 {
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 600;
   margin-bottom: 10px;
+  color: var(--soft);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .card p {
-  font-size: 26px;
+  font-size: 28px;
   font-weight: bold;
+  color: var(--text);
 }
 
 .analytics-grid,
@@ -498,7 +503,7 @@ textarea,
   margin-right: 6px;
 }
 
-.view-pic-btn { background: #0f172a; }
+.view-pic-btn { background: #475569; }
 .history-btn { background: #2563eb; }
 .calendar-btn { background: #8b5cf6; }
 .profile-btn { background: #10b981; }
