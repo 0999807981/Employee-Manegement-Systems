@@ -380,24 +380,135 @@
         </section>
 
         <section id="attendanceSection" class="page-section">
-          <div class="table-section">
-            <h2>Attendance</h2>
-            <div class="filters">
-              <input type="date" id="attendanceDate" />
-              <select id="attendanceEmployee"><option value="">Select Employee</option></select>
-              <select id="attendanceStatusSelect">
-                <option value="Present">Present</option>
-                <option value="Late">Late</option>
-                <option value="Absent">Absent</option>
-              </select>
-              <button id="markAttendanceBtn" class="btn-primary" type="button">Mark Attendance</button>
-              <button id="clearSingleAttendanceBtn" class="btn-warning" type="button">Clear Selected Attendance</button>
-              <button id="clearAllAttendanceForDateBtn" class="btn-danger" type="button">Clear All For Date</button>
+
+          <!-- Clock In/Out Panel -->
+          <section class="summary-cards att-clock-cards">
+            <div class="card att-clock-card" id="clockInCard">
+              <div class="clock-card-icon">🟢</div>
+              <div>
+                <h3>Clock In</h3>
+                <p id="clockInTime">--:--</p>
+                <small class="muted-text" id="clockInStatus">Not clocked in today</small>
+              </div>
+              <button id="clockInBtn" class="btn-primary clock-btn" type="button">Clock In</button>
+            </div>
+            <div class="card att-clock-card" id="clockOutCard">
+              <div class="clock-card-icon">🔴</div>
+              <div>
+                <h3>Clock Out</h3>
+                <p id="clockOutTime">--:--</p>
+                <small class="muted-text" id="clockOutStatus">Not clocked out today</small>
+              </div>
+              <button id="clockOutBtn" class="btn-secondary clock-btn" type="button">Clock Out</button>
+            </div>
+            <div class="card att-clock-card">
+              <div class="clock-card-icon">⏱️</div>
+              <div>
+                <h3>Hours Worked Today</h3>
+                <p id="hoursWorkedToday">0h 0m</p>
+                <small class="muted-text" id="overtimeStatus">No overtime</small>
+              </div>
+            </div>
+            <div class="card att-clock-card">
+              <div class="clock-card-icon">🔔</div>
+              <div>
+                <h3>Late Alerts Today</h3>
+                <p id="lateAlertsCount">0</p>
+                <small class="muted-text">Employees arrived late</small>
+              </div>
+            </div>
+          </section>
+
+          <!-- Shift Management + Mark Attendance -->
+          <div class="content-grid att-main-grid" style="margin-bottom:20px;">
+
+            <div class="form-section">
+              <h2>Shift Management</h2>
+              <form id="shiftForm">
+                <div class="form-group">
+                  <label for="shiftEmployee">Employee</label>
+                  <select id="shiftEmployee" required><option value="">Select Employee</option></select>
+                </div>
+                <div class="form-group">
+                  <label for="shiftName">Shift</label>
+                  <select id="shiftName" required>
+                    <option value="Morning">🌅 Morning (6:00 AM – 2:00 PM)</option>
+                    <option value="Afternoon">🌤️ Afternoon (2:00 PM – 10:00 PM)</option>
+                    <option value="Night">🌙 Night (10:00 PM – 6:00 AM)</option>
+                    <option value="Standard">💼 Standard (8:00 AM – 5:00 PM)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="shiftStartDate">Start Date</label>
+                  <input type="date" id="shiftStartDate" required />
+                </div>
+                <div class="form-group">
+                  <label for="shiftEndDate">End Date</label>
+                  <input type="date" id="shiftEndDate" required />
+                </div>
+                <div class="button-group">
+                  <button type="submit" class="btn-primary">Assign Shift</button>
+                </div>
+              </form>
+
+              <div style="margin-top:20px;">
+                <h3 style="margin-bottom:12px; font-size:16px;">Current Shifts</h3>
+                <div id="shiftsList" class="shifts-list"></div>
+                <div class="empty-state" id="shiftsEmptyState">No shifts assigned yet.</div>
+              </div>
             </div>
 
-            <div class="filters">
-              <input type="month" id="monthFilter" />
-              <input type="text" id="attendanceSearchInput" placeholder="Search attendance..." class="section-search" />
+            <div class="form-section">
+              <h2>Mark Attendance</h2>
+              <div class="filters" style="flex-direction:column; gap:10px;">
+                <input type="date" id="attendanceDate" />
+                <select id="attendanceEmployee"><option value="">Select Employee</option></select>
+                <select id="attendanceStatusSelect">
+                  <option value="Present">Present</option>
+                  <option value="Late">Late</option>
+                  <option value="Absent">Absent</option>
+                </select>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                  <button id="markAttendanceBtn" class="btn-primary" type="button" style="flex:1;">Mark Attendance</button>
+                  <button id="clearSingleAttendanceBtn" class="btn-warning" type="button" style="flex:1;">Clear Selected</button>
+                  <button id="clearAllAttendanceForDateBtn" class="btn-danger" type="button" style="flex:1;">Clear All For Date</button>
+                </div>
+              </div>
+
+              <div style="margin-top:20px;">
+                <h3 style="margin-bottom:12px; font-size:16px;">Late Arrival Alerts</h3>
+                <div id="lateAlertsList" class="notification-list" style="max-height:220px; overflow-y:auto;"></div>
+                <div class="empty-state" id="lateAlertsEmptyState">No late alerts today.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Attendance Settings -->
+          <div class="form-section" style="margin-bottom:20px;">
+            <h2>⚙️ Attendance Settings</h2>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+              <div class="form-group">
+                <label for="workStartTimeInput">Work Start Time <small class="muted-text">(for late detection)</small></label>
+                <input type="time" id="workStartTimeInput" value="08:00" />
+              </div>
+              <div class="form-group">
+                <label for="workHoursInput">Standard Work Hours / Day</label>
+                <input type="number" id="workHoursInput" value="8" min="1" max="24" />
+              </div>
+            </div>
+            <div class="button-group" style="margin-top:8px;">
+              <button id="saveAttSettingsBtn" type="button" class="btn-primary">Save Attendance Settings</button>
+            </div>
+          </div>
+
+          <!-- Monthly Attendance Table -->
+          <div class="table-section">
+            <div class="section-header">
+              <h2>Monthly Attendance Overview</h2>
+              <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <input type="month" id="monthFilter" />
+                <input type="text" id="attendanceSearchInput" placeholder="Search attendance..." class="section-search" />
+              </div>
             </div>
 
             <div class="table-wrap">
@@ -407,8 +518,13 @@
                     <th>ID</th>
                     <th>Name</th>
                     <th>Department</th>
-                    <th>Late Days This Month</th>
-                    <th>Absent Days This Month</th>
+                    <th>Shift</th>
+                    <th>Clock In</th>
+                    <th>Clock Out</th>
+                    <th>Hrs Worked</th>
+                    <th>Overtime</th>
+                    <th>Late Days</th>
+                    <th>Absent Days</th>
                     <th>Attendance %</th>
                   </tr>
                 </thead>
@@ -416,6 +532,7 @@
               </table>
             </div>
           </div>
+
         </section>
 
         <section id="leaveSection" class="page-section">
@@ -975,5 +1092,7 @@
       });
     });
   </script>
+
+
 </body>
 </html>
