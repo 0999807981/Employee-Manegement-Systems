@@ -1129,6 +1129,58 @@ tbody tr:hover {
   flex-shrink: 0;
 }
 
+/* ── Hamburger Button ── */
+.hamburger-btn {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 42px;
+  height: 42px;
+  padding: 8px;
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: 0.2s ease;
+}
+
+.hamburger-btn span {
+  display: block;
+  width: 100%;
+  height: 2px;
+  background: var(--text);
+  border-radius: 2px;
+  transition: 0.3s ease;
+}
+
+.hamburger-btn:hover {
+  background: var(--hover);
+  transform: none;
+}
+
+/* ── Sidebar Overlay ── */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 200;
+}
+
+.sidebar-overlay.show {
+  display: block;
+}
+
+/* ── Sidebar open on mobile ── */
+.sidebar.mobile-open {
+  transform: translateX(0) !important;
+}
+
+/* ════════════════════════════════
+   BREAKPOINT: 1400px
+════════════════════════════════ */
 @media (max-width: 1400px) {
   .summary-cards {
     grid-template-columns: repeat(4, 1fr);
@@ -1139,26 +1191,47 @@ tbody tr:hover {
   }
 }
 
+/* ════════════════════════════════
+   BREAKPOINT: 1200px
+════════════════════════════════ */
 @media (max-width: 1200px) {
   .charts-grid,
   .analytics-grid {
     grid-template-columns: 1fr;
   }
+
+  .summary-cards {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
+/* ════════════════════════════════
+   BREAKPOINT: 1100px
+════════════════════════════════ */
 @media (max-width: 1100px) {
-  .content-grid {
+  .container {
+    grid-template-columns: 240px 1fr;
+  }
+
+  .content-grid,
+  .payroll-main-grid {
     grid-template-columns: 1fr;
   }
 
   .attendance-calendar-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  .summary-cards {
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
+/* ════════════════════════════════
+   BREAKPOINT: 900px — tablet
+════════════════════════════════ */
 @media (max-width: 900px) {
-  html,
-  body {
+  html, body {
     overflow: auto;
   }
 
@@ -1168,8 +1241,17 @@ tbody tr:hover {
     overflow: visible;
   }
 
+  /* Sidebar slides in from left on mobile */
   .sidebar {
-    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 270px;
+    z-index: 300;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.15);
   }
 
   .main {
@@ -1178,16 +1260,80 @@ tbody tr:hover {
   }
 
   .topbar {
-    position: static;
-    padding: 28px 20px 18px;
+    position: sticky;
+    top: 0;
+    z-index: 80;
+    padding: 16px 16px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: nowrap;
+  }
+
+  .topbar > div:first-of-type {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .topbar h1 {
+    font-size: 20px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .topbar-subtext {
+    font-size: 12px;
+  }
+
+  .dashboard-date {
+    font-size: 12px;
+    margin-top: 2px;
+  }
+
+  .topbar-actions {
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .search-box {
+    display: none;
+  }
+
+  .hamburger-btn {
+    display: flex;
   }
 
   .mobile-nav-bar {
-    display: block;
+    display: none; /* we use the slide-in sidebar instead */
   }
 
   .page-content {
-    padding: 0 20px 20px;
+    padding: 0 16px 20px;
+  }
+
+  .summary-cards {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .performance-summary-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .analytics-grid,
+  .content-grid,
+  .charts-grid,
+  .payroll-main-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .attendance-calendar-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .history-stats {
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .login-wrapper {
@@ -1203,8 +1349,160 @@ tbody tr:hover {
     margin: 0 auto;
   }
 
+  .section-search {
+    max-width: 100%;
+  }
+
+  .filters {
+    flex-direction: column;
+  }
+
+  .filters input,
+  .filters select,
+  .filters button {
+    width: 100%;
+  }
+
+  .wide-modal {
+    max-width: 100%;
+  }
+
+  .modal-card {
+    padding: 16px;
+  }
+}
+
+/* ════════════════════════════════
+   BREAKPOINT: 600px — mobile
+════════════════════════════════ */
+@media (max-width: 600px) {
+  .topbar {
+    padding: 12px 12px 10px;
+    gap: 8px;
+  }
+
+  .topbar h1 {
+    font-size: 16px;
+  }
+
+  .action-menu-btn {
+    min-width: 80px;
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .topbar-logout-btn {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
   .summary-cards {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .card {
+    padding: 14px;
+  }
+
+  .card h3 {
+    font-size: 11px;
+  }
+
+  .card p {
+    font-size: 22px;
+  }
+
+  .page-content {
+    padding: 0 12px 16px;
+  }
+
+  .form-section,
+  .table-section,
+  .chart-card {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .form-section h2,
+  .table-section h2 {
+    font-size: 18px;
+  }
+
+  th, td {
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+
+  .history-stats {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .attendance-calendar-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+
+  .calendar-day {
+    padding: 8px;
+    min-height: 60px;
+  }
+
+  .calendar-day .day-number {
+    font-size: 14px;
+  }
+
+  .calendar-day .day-status {
+    font-size: 9px;
+    padding: 3px 5px;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .section-search {
+    max-width: 100%;
+  }
+
+  .button-group {
+    flex-direction: column;
+  }
+
+  .modal-card {
+    border-radius: 14px;
+    padding: 14px;
+  }
+
+  .close-modal {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+  }
+
+  .login-screen {
+    padding: 16px;
+  }
+
+  .login-card {
+    padding: 20px;
+    border-radius: 20px;
+  }
+
+  .login-card-top h2 {
+    font-size: 24px;
+  }
+
+  .action-dropdown {
+    right: 0;
+    left: auto;
+    width: 190px;
+  }
+
+  .payslip-row {
+    flex-direction: column;
+    gap: 2px;
   }
 
   .performance-summary-cards {
@@ -1212,34 +1510,28 @@ tbody tr:hover {
   }
 }
 
-@media (max-width: 768px) {
-  .summary-cards,
-  .history-stats {
+/* ════════════════════════════════
+   BREAKPOINT: 400px — small phones
+════════════════════════════════ */
+@media (max-width: 400px) {
+  .summary-cards {
     grid-template-columns: 1fr;
   }
 
-  .search-box input {
-    width: 100%;
-  }
-
-  .topbar {
-    align-items: stretch;
-  }
-
-  .topbar-actions {
-    width: 100%;
-    justify-content: space-between;
+  .topbar h1 {
+    font-size: 14px;
   }
 
   .attendance-calendar-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .login-row {
-    align-items: flex-start;
+  .history-stats {
+    grid-template-columns: 1fr 1fr;
   }
 }
 
+/* ── Other ── */
 .payroll-main-grid {
   grid-template-columns: 380px 1fr;
 }
@@ -1251,7 +1543,7 @@ tbody tr:hover {
 }
 
 #auditTableBody td:last-child {
-  min-width: 260px;
+  min-width: 200px;
   color: var(--soft);
   line-height: 1.5;
 }

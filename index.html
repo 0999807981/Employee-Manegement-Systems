@@ -82,7 +82,8 @@
   </div>
 
   <div class="container" id="appContainer" style="display:none;">
-    <aside class="sidebar">
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
+    <aside class="sidebar" id="mainSidebar">
       <div class="brand">
         <div class="brand-mark" id="brandMark">EMS</div>
         <div class="brand-text">
@@ -149,6 +150,10 @@
 
     <main class="main">
       <div class="topbar">
+        <button id="hamburgerBtn" class="hamburger-btn" type="button" aria-label="Open menu">
+          <span></span><span></span><span></span>
+        </button>
+
         <div>
           <h1 id="pageTitle">Employee Management Dashboard</h1>
           <p class="topbar-subtext" id="roleText">Role: Admin</p>
@@ -928,5 +933,41 @@
 
   <script src="supabase.js"></script>
   <script src="script.js"></script>
+
+  <script>
+    // Hamburger / sidebar toggle
+    const hamburgerBtn = document.getElementById('hamburgerBtn');
+    const mainSidebar  = document.getElementById('mainSidebar');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+    function openSidebar() {
+      mainSidebar.classList.add('mobile-open');
+      sidebarOverlay.classList.add('show');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeSidebar() {
+      mainSidebar.classList.remove('mobile-open');
+      sidebarOverlay.classList.remove('show');
+      document.body.style.overflow = '';
+    }
+
+    hamburgerBtn && hamburgerBtn.addEventListener('click', function() {
+      if (mainSidebar.classList.contains('mobile-open')) {
+        closeSidebar();
+      } else {
+        openSidebar();
+      }
+    });
+
+    sidebarOverlay && sidebarOverlay.addEventListener('click', closeSidebar);
+
+    // Close sidebar when a nav item is clicked on mobile
+    document.querySelectorAll('.nav-item').forEach(function(item) {
+      item.addEventListener('click', function() {
+        if (window.innerWidth <= 900) closeSidebar();
+      });
+    });
+  </script>
 </body>
 </html>
