@@ -1399,25 +1399,189 @@ function renderAttendanceSection() {
   if (!attendanceTableBody) return;
   attendanceTableBody.innerHTML = "";
 
-  let rows = state.employees;
+  // ── EMPLOYEE: show personal view only ──
   if (isEmployee()) {
     const emp = getCurrentEmployee();
-    rows = emp ? [emp] : [];
-    if (attendanceEmployee)       { attendanceEmployee.value = emp?.id || ""; attendanceEmployee.disabled = true; }
-    if (attendanceStatusSelect)   attendanceStatusSelect.disabled = true;
-    if (markAttendanceBtn)        markAttendanceBtn.style.display        = "none";
-    if (clearSingleAttendanceBtn) clearSingleAttendanceBtn.style.display = "none";
-    if (clearAllAttendanceForDateBtn) clearAllAttendanceForDateBtn.style.display = "none";
-  } else {
-    if (attendanceEmployee)       attendanceEmployee.disabled       = false;
-    if (attendanceStatusSelect)   attendanceStatusSelect.disabled   = false;
-    if (markAttendanceBtn)        markAttendanceBtn.style.display        = "inline-block";
-    if (clearSingleAttendanceBtn) clearSingleAttendanceBtn.style.display = "inline-block";
-    if (clearAllAttendanceForDateBtn) clearAllAttendanceForDateBtn.style.display = "inline-block";
-    rows = rows.filter((emp) =>
-      `${emp.name} ${emp.id} ${emp.department}`.toLowerCase().includes(search)
-    );
+    if (!emp) return;
+
+    // Hide all admin-only panels
+    const adminPanels = [
+      "attAdminGrid",      // shift form + mark attendance grid
+      "lateAlertsPanel",   // late alerts section inside mark panel
+      "attSettingsPanel",  // attendance settings card
+    ];
+    adminPanels.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = "none";
+    });
+
+    // Show employee self-view panel (create if not exists)
+    let selfView = document.getElementById("attSelfView");
+    if (!selfView) {
+      selfView = document.createElement("div");
+      selfView.id = "attSelfView";
+      // Insert before the monthly table
+      const tableSection = attendanceTableBody.closest(".table-section");
+      if (tableSection && tableSection.parentNode) {
+        tableSection.parentNode.insertBefore(selfView, tableSection);
+      }
+    }
+    selfView.style.display = "block";
+
+    const clockRec   = getClockRecord(emp.id, today);
+    const shift      = getEmployeeShiftForDate(emp.id, today);
+    const totalHours = clockRec ? calcHoursWorked(clockRec.clockIn, clockRec.clockOut) : 0;
+    const overtime   = clockRec?.overtime || 0;
+    const lateDays   = getLateDaysForMonth(emp.id, selectedMonth);
+    const absentDays = getAbsentDaysForMonth(emp.id, selectedMonth);
+    const presentDays= getPresentDaysForMonth(emp.id, selectedMonth);
+    const rate       = getAttendanceRate(emp.id, selectedMonth);
+
+    selfView.innerHTML = `
+      <div class="content-grid" style="margin-bottom:20px;">
+
+        <!-- Today Card -->
+        <div class="form-section">
+          <h2>Today — ${formatNiceDate(today)}</h2>
+
+          <div class="history-stats" style="grid-template-columns:repeat(2,1fr); margin-bottom:18px;">
+            <div class="history-stat-box">
+              <span>Clock In</span>
+              <strong>${clockRec?.clockIn ? formatTime(clockRec.clockIn) : "—"}</strong>
+              <small class="muted-text">${clockRec?.clockIn ? (clockRec.isLate ? "⚠️ Late" : "✅ On time") : "Not clocked in"}</small>
+            </div>
+            <div class="history-stat-box">
+              <span>Clock Out</span>
+              <strong>${clockRec?.clockOut ? formatTime(clockRec.clockOut) : "—"}</strong>
+              <small class="muted-text">${clockRec?.clockOut ? "✅ Done" : "Not clocked out"}</small>
+            </div>
+            <div class="history-stat-box">
+              <span>Hours Worked</span>
+              <strong>${formatDuration(totalHours)}</strong>
+              <small class="muted-text">${overtime > 0 ? "⚡ +" + formatDuration(overtime) + " overtime" : "No overtime"}</small>
+            </div>
+            <div class="history-stat-box">
+              <span>My Shift</span>
+              <strong>${shift ? shift.shiftName : "—"}</strong>
+              <small class="muted-text">${shift ? shift.startDate + " → " + shift.endDate : "No shift assigned"}</small>
+            </div>
+          </div>
+
+          <div class="button-group">
+            <button id="clockInBtn"  class="btn-primary"   type="button">🟢 Clock In</button>
+            <button id="clockOutBtn" class="btn-secondary" type="button">🔴 Clock Out</button>
+          </div>
+        </div>
+
+        <!-- Monthly Summary -->
+        <div class="form-section">
+          <h2>My Monthly Summary</h2>
+          <div style="display:flex; gap:8px; margin-bottom:14px;">
+            <input type="month" id="monthFilter" style="flex:1;" />
+          </div>
+          <div class="history-stats" style="grid-template-columns:repeat(2,1fr);">
+            <div class="history-stat-box">
+              <span>Present Days</span>
+              <strong style="color:#16a34a;">${presentDays}</strong>
+            </div>
+            <div class="history-stat-box">
+              <span>Late Days</span>
+              <strong style="color:#d97706;">${lateDays}</strong>
+            </div>
+            <div class="history-stat-box">
+              <span>Absent Days</span>
+              <strong style="color:#dc2626;">${absentDays}</strong>
+            </div>
+            <div class="history-stat-box">
+              <span>Attendance Rate</span>
+              <strong style="color:#2563eb;">${rate}%</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- My Attendance History Table -->
+      <div class="table-section" style="margin-bottom:20px;">
+        <h2>My Attendance History — ${selectedMonth}</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Clock In</th>
+                <th>Clock Out</th>
+                <th>Hours</th>
+                <th>Overtime</th>
+              </tr>
+            </thead>
+            <tbody id="empAttHistoryBody"></tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="empAttHistoryEmpty" style="display:none;">No attendance records this month.</div>
+      </div>
+    `;
+
+    // Wire clock buttons
+    document.getElementById("clockInBtn")?.addEventListener("click",  handleClockIn);
+    document.getElementById("clockOutBtn")?.addEventListener("click", handleClockOut);
+    document.getElementById("monthFilter")?.addEventListener("change", renderAttendanceSection);
+
+    // Fill history table
+    const histBody  = document.getElementById("empAttHistoryBody");
+    const histEmpty = document.getElementById("empAttHistoryEmpty");
+    if (histBody) {
+      const records = state.attendanceRecords
+        .filter(r => r.employeeId === emp.id && r.date.startsWith(selectedMonth))
+        .sort((a, b) => b.date.localeCompare(a.date));
+
+      if (histEmpty) histEmpty.style.display = records.length ? "none" : "block";
+
+      records.forEach(rec => {
+        const cr = getClockRecord(emp.id, rec.date);
+        const hrs = cr ? calcHoursWorked(cr.clockIn, cr.clockOut) : 0;
+        const ot  = cr?.overtime || 0;
+        let statusClass = "pending-status";
+        if (rec.status === "Present") statusClass = "present";
+        if (rec.status === "Late")    statusClass = "late-status";
+        if (rec.status === "Absent")  statusClass = "absent";
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${formatNiceDate(rec.date)}</td>
+          <td><span class="status ${statusClass}">${rec.status}</span></td>
+          <td>${cr?.clockIn  ? formatTime(cr.clockIn)  : "<span class='muted-text'>—</span>"}</td>
+          <td>${cr?.clockOut ? formatTime(cr.clockOut) : "<span class='muted-text'>—</span>"}</td>
+          <td>${hrs > 0 ? formatDuration(hrs) : "<span class='muted-text'>—</span>"}</td>
+          <td>${ot > 0 ? "<span class='overtime-badge overtime-yes'>+" + formatDuration(ot) + "</span>" : "<span class='overtime-badge overtime-no'>None</span>"}</td>
+        `;
+        histBody.appendChild(tr);
+      });
+    }
+
+    return; // stop here for employees
   }
+
+  // ── ADMIN/HR: show full view ──
+
+  // Restore admin panels visibility
+  const adminPanels = ["attAdminGrid", "lateAlertsPanel", "attSettingsPanel"];
+  adminPanels.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = "";
+  });
+
+  // Hide employee self-view if present
+  const selfView = document.getElementById("attSelfView");
+  if (selfView) selfView.style.display = "none";
+
+  if (markAttendanceBtn)        markAttendanceBtn.style.display        = "inline-block";
+  if (clearSingleAttendanceBtn) clearSingleAttendanceBtn.style.display = "inline-block";
+  if (clearAllAttendanceForDateBtn) clearAllAttendanceForDateBtn.style.display = "inline-block";
+
+  const rows = state.employees.filter(emp =>
+    `${emp.name} ${emp.id} ${emp.department}`.toLowerCase().includes(search)
+  );
 
   rows.forEach((emp) => {
     const lateDays   = getLateDaysForMonth(emp.id, selectedMonth);
@@ -2933,4 +3097,4 @@ window.deleteDepartment  = deleteDepartment;
 window.deleteUserAccount = deleteUserAccount;
 window.deleteAnnouncement = deleteAnnouncement;
 window.deleteHoliday     = deleteHoliday;
-window.deleteShift       = deleteShift;
+window.deleteShift       = deleteShift; 
