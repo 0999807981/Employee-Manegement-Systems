@@ -1547,3 +1547,40 @@ tbody tr:hover {
   color: var(--soft);
   line-height: 1.5;
 }
+
+/* ── Sidebar Logout ── */
+.sidebar-logout-wrapper {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--nav-item-border);
+}
+
+.sidebar-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 15px 14px 15px 16px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #ef4444;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.22s ease;
+  text-align: left;
+}
+
+.sidebar-logout-btn:hover {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.2);
+  transform: none;
+}
+
+.sidebar-logout-btn .nav-icon {
+  width: 22px;
+  min-width: 22px;
+  text-align: center;
+  font-size: 16px;
+}
